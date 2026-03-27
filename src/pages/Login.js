@@ -32,6 +32,11 @@ function Login() {
           <button type="submit" style={styles.button}>
             Login
           </button>
+
+          <p style={{ marginTop: "15px", textAlign: "center" }}>
+            Don't have an account? <a href="/register">Register</a>
+          </p>
+
         </form>
       </div>
     </div>
