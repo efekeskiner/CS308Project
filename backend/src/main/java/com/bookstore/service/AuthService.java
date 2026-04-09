@@ -8,32 +8,35 @@ import com.bookstore.dto.UserDto;
 import com.bookstore.model.Role;
 import com.bookstore.model.User;
 import com.bookstore.repository.UserRepository;
+import com.bookstore.security.JwtUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.UUID;
 
 @Service
     public class AuthService {
 
     private final UserRepository userRepository;
             private final BCryptPasswordEncoder passwordEncoder;
+            private final JwtUtils jwtUtils;
 
-    public AuthService(UserRepository userRepository) {
+    public AuthService(UserRepository userRepository, JwtUtils jwtUtils) {
                 this.userRepository = userRepository;
                 this.passwordEncoder = new BCryptPasswordEncoder();
+                this.jwtUtils = jwtUtils;
     }
 
     public LoginResponse login(LoginRequest request) {
                 User user = userRepository.findByEmail(request.getEmail())
-                                    .orElseThrow(() -> new InvalidCredentialsException());
+                                    .orElseThrow(InvalidCredentialsException::new);
 
                 if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
                                 throw new InvalidCredentialsException();
                 }
 
-                String accessToken  = UUID.randomUUID().toString();
-                String refreshToken = UUID.randomUUID().toString();
+                String accessToken  = jwtUtils.generateAccessToken(
+                                    user.getId(), user.getEmail(), user.getRole().name());
+                String refreshToken = jwtUtils.generateRefreshToken(user.getEmail());
+
                 return new LoginResponse(accessToken, refreshToken, new UserDto(user));
     }
 
@@ -43,14 +46,12 @@ import java.util.UUID;
                 }
 
                 String hash = passwordEncoder.encode(request.getPassword());
-
                 User user = new User();
                 user.setName(request.getName());
                 user.setEmail(request.getEmail());
                 user.setPasswordHash(hash);
                 user.setTaxId(request.getPhone());
                 user.setRole(Role.CUSTOMER);
-
                 userRepository.save(user);
 
                 return new RegisterResponse("Registration successful", new UserDto(user));
