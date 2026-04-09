@@ -11,14 +11,10 @@ function App() {
               <Route path="/" element={<Navigate to="/products" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Registration />} />
-        <Route
-          path="/products"
-          element={
-                        <PrivateRoute>
-                          <ProductList />
-            </PrivateRoute>
-}
-        />
+        <Route path="/cart" element={<CartPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/products" element={<ProductList />} />
+
           </Routes>
           </Router>
   );
