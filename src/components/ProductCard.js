@@ -1,4 +1,21 @@
+import { useEffect, useState } from "react";
+import { isInWishlist, toggleWishlist } from "../services/wishlist";
+
+
 function ProductCard({ product, onAddToCart }) {
+  const [wishlisted, setWishlisted] = useState(false);
+
+  useEffect(() => {
+    if (product) {
+      setWishlisted(isInWishlist(product.id));
+    }
+  }, [product]);
+
+  const handleWishlistToggle = () => {
+    const updatedWishlist = toggleWishlist(product);
+    const exists = updatedWishlist.some((item) => item.id === product.id);
+    setWishlisted(exists);
+  };
   if (!product) return null;
 
   return (
@@ -60,6 +77,15 @@ function ProductCard({ product, onAddToCart }) {
       >
         {product.inStock ? "Add to Cart" : "Out of Stock"}
       </button>
+      <button
+  style={{
+    ...styles.wishlistButton,
+    ...(wishlisted ? styles.wishlisted : {}),
+  }}
+  onClick={handleWishlistToggle}
+>
+  {wishlisted ? "♥ Remove from Wishlist" : "♡ Add to Wishlist"}
+</button>
     </div>
   );
 }
@@ -121,6 +147,22 @@ const styles = {
   disabledButton: {
     backgroundColor: "#9ca3af",
     cursor: "not-allowed",
+  },
+  wishlistButton: {
+    marginTop: "10px",
+    width: "100%",
+    padding: "12px",
+    border: "1px solid #6b4f3b",
+    borderRadius: "10px",
+    backgroundColor: "#fff",
+    color: "#6b4f3b",
+    fontSize: "16px",
+    cursor: "pointer",
+  },
+  wishlisted: {
+    backgroundColor: "#fce7f3",
+    color: "#9d174d",
+    border: "1px solid #9d174d",
   },
 };
 
