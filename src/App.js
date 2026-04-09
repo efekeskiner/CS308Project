@@ -3,6 +3,8 @@ import Login from "./pages/Login";
 import Registration from "./pages/Registration";
 import ProductList from "./pages/ProductList";
 import PrivateRoute from "./components/PrivateRoute";
+import CartPage from "./pages/CartPage";
+import CheckoutPage from "./pages/CheckoutPage";
 
 function App() {
     return (
@@ -14,6 +16,15 @@ function App() {
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/products" element={<ProductList />} />
+
+        {/* <Route
+          path="/products"
+          element={
+                        <PrivateRoute>
+                          <ProductList />
+            </PrivateRoute>
+}
+        /> */}
 
           </Routes>
           </Router>

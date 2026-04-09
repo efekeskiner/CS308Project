@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { addToCart, getCart } from "../services/cart";
 import ProductCard from "../components/ProductCard";
 import mockProducts from "../data/mockProducts";
 
@@ -6,6 +8,11 @@ function ProductList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("default");
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  const navigate = useNavigate();
+  const [cartCount, setCartCount] = useState(
+    getCart().reduce((sum, item) => sum + item.quantity, 0)
+  );
 
   const categories = ["All", ...new Set(mockProducts.map((p) => p.category))];
 
@@ -32,12 +39,28 @@ function ProductList() {
     return filtered;
   }, [searchTerm, sortBy, selectedCategory]);
 
+  const handleAddToCart = (product) => {
+    if (!product.inStock) return;
+
+    const updatedCart = addToCart(product);
+    const totalItems = updatedCart.reduce((sum, item) => sum + item.quantity, 0);
+    setCartCount(totalItems);
+  };
+
   return (
     <div style={styles.page}>
-      <h1 style={styles.title}>Book Store</h1>
-      <p style={styles.subtitle}>
-        Discover books by title, author, category, price, and popularity.
-      </p>
+      <div style={styles.headerRow}>
+        <div>
+          <h1 style={styles.title}>Book Store</h1>
+          <p style={styles.subtitle}>
+            Discover books by title, author, category, price, and popularity.
+          </p>
+        </div>
+
+        <button style={styles.cartButton} onClick={() => navigate("/cart")}>
+          Cart ({cartCount})
+        </button>
+      </div>
 
       <div style={styles.topBar}>
         <input
@@ -75,7 +98,7 @@ function ProductList() {
       <div style={styles.grid}>
         {filteredProducts.length > 0 ? (
           filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
           ))
         ) : (
           <p style={styles.noResult}>No books found.</p>
@@ -93,6 +116,25 @@ const styles = {
       "linear-gradient(180deg, #f8f4ee 0%, #f3ece3 50%, #efe5d8 100%)",
     fontFamily: "Arial, sans-serif",
   },
+
+  headerRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "16px",
+    flexWrap: "wrap",
+  },
+
+  cartButton: {
+    backgroundColor: "#6b4f3b",
+    color: "white",
+    border: "none",
+    borderRadius: "10px",
+    padding: "12px 16px",
+    fontSize: "16px",
+    cursor: "pointer",
+  },
+
   title: {
     textAlign: "center",
     fontSize: "42px",

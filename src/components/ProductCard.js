@@ -1,4 +1,4 @@
-function ProductCard({ product }) {
+function ProductCard({ product, onAddToCart }) {
   if (!product) return null;
 
   return (
@@ -56,6 +56,7 @@ function ProductCard({ product }) {
           ...(product.inStock ? {} : styles.disabledButton),
         }}
         disabled={!product.inStock}
+        onClick={() => onAddToCart(product)}
       >
         {product.inStock ? "Add to Cart" : "Out of Stock"}
       </button>
