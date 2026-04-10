@@ -1,0 +1,15 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: bookstore_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "1234"
+      MYSQL_DATABASE: bookstore_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - bookstore_db_data:/var/lib/mysql
+
+volumes:
+  bookstore_db_data:
