@@ -6,6 +6,7 @@ import PrivateRoute from "./components/PrivateRoute";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import WishlistPage from "./pages/WishlistPage";
+import ProfilePage from "./pages/ProfilePage";
 
 function App() {
     return (
@@ -20,9 +21,16 @@ function App() {
 
   <button
     style={styles.navButton}
-    onClick={() => window.location.href = "/wishlist"}
+    onClick={() => window.location.href = "/cart"}
   >
-    Wishlist
+    Cart
+  </button>
+
+  <button
+    style={styles.navButton}
+    onClick={() => window.location.href = "/profile"}
+  >
+    Profile
   </button>
 </div>
             <Routes>
@@ -32,6 +40,7 @@ function App() {
         <Route path="/cart" element={<CartPage />} />
 
         <Route path="/wishlist" element={<WishlistPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
 
         <Route
           path="/checkout"
