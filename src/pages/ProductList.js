@@ -1,10 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { addToCart, getCart } from "../services/cart";
 import ProductCard from "../components/ProductCard";
-import mockProducts from "../data/mockProducts";
+import getProducts from "../services/products";
 
 function ProductList() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("default");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -14,30 +18,46 @@ function ProductList() {
     getCart().reduce((sum, item) => sum + item.quantity, 0)
   );
 
-  const categories = ["All", ...new Set(mockProducts.map((p) => p.category))];
+  useEffect(() => {
+    getProducts()
+      .then((data) => {
+        setProducts(data.content || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("Products could not be loaded.");
+        setLoading(false);
+      });
+  }, []);
+
+  const categories = [
+    "All",
+    ...new Set(products.map((p) => p.categoryName).filter(Boolean)),
+  ];
 
   const filteredProducts = useMemo(() => {
-    let filtered = mockProducts.filter((product) => {
+    let filtered = products.filter((product) => {
       const searchText =
-        `${product.name} ${product.description} ${product.author}`.toLowerCase();
+        `${product.name || ""} ${product.description || ""} ${product.author || ""}`.toLowerCase();
 
       const matchesSearch = searchText.includes(searchTerm.toLowerCase());
       const matchesCategory =
-        selectedCategory === "All" || product.category === selectedCategory;
+        selectedCategory === "All" || product.categoryName === selectedCategory;
 
       return matchesSearch && matchesCategory;
     });
 
     if (sortBy === "priceAsc") {
-      filtered.sort((a, b) => a.price - b.price);
+      filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
     } else if (sortBy === "priceDesc") {
-      filtered.sort((a, b) => b.price - a.price);
+      filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
     } else if (sortBy === "popularity") {
-      filtered.sort((a, b) => b.popularity - a.popularity);
+      filtered.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
     }
 
     return filtered;
-  }, [searchTerm, sortBy, selectedCategory]);
+  }, [products, searchTerm, sortBy, selectedCategory]);
 
   const handleAddToCart = (product) => {
     if (!product.inStock) return;
@@ -95,15 +115,25 @@ function ProductList() {
         </select>
       </div>
 
-      <div style={styles.grid}>
-        {filteredProducts.length > 0 ? (
-          filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
-          ))
-        ) : (
-          <p style={styles.noResult}>No books found.</p>
-        )}
-      </div>
+      {loading ? (
+        <p style={styles.noResult}>Loading books...</p>
+      ) : error ? (
+        <p style={styles.noResult}>{error}</p>
+      ) : (
+        <div style={styles.grid}>
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onAddToCart={handleAddToCart}
+              />
+            ))
+          ) : (
+            <p style={styles.noResult}>No books found.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -116,7 +146,6 @@ const styles = {
       "linear-gradient(180deg, #f8f4ee 0%, #f3ece3 50%, #efe5d8 100%)",
     fontFamily: "Arial, sans-serif",
   },
-
   headerRow: {
     display: "flex",
     justifyContent: "space-between",
@@ -124,7 +153,6 @@ const styles = {
     gap: "16px",
     flexWrap: "wrap",
   },
-
   cartButton: {
     backgroundColor: "#6b4f3b",
     color: "white",
@@ -134,7 +162,6 @@ const styles = {
     fontSize: "16px",
     cursor: "pointer",
   },
-
   title: {
     textAlign: "center",
     fontSize: "42px",

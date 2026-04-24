@@ -7,6 +7,7 @@ import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import WishlistPage from "./pages/WishlistPage";
 import ProfilePage from "./pages/ProfilePage";
+import ProductDetailPage from "./pages/ProductDetailPage";
 import OrdersPage from "./pages/OrdersPage";
 import AdminPage from "./pages/AdminPage";
 import { isLoggedIn, getCurrentUser, logout } from "./services/auth";
@@ -38,29 +39,50 @@ function Navbar() {
       <span style={styles.brand} onClick={() => navigate("/products")}>
         Online Bookstore
       </span>
+
       <div style={styles.links}>
-        <button style={styles.navButton} onClick={() => navigate("/products")}>Products</button>
+        <button style={styles.navButton} onClick={() => navigate("/products")}>
+          Products
+        </button>
+
         <button style={styles.navButton} onClick={() => navigate("/cart")}>
           🛒 Cart {cartCount > 0 && <span style={styles.badge}>{cartCount}</span>}
         </button>
+
         {user ? (
           <>
-            <button style={styles.navButton} onClick={() => navigate("/orders")}>My Orders</button>
-            <button style={styles.navButton} onClick={() => navigate("/wishlist")}>Wishlist</button>
+            <button style={styles.navButton} onClick={() => navigate("/orders")}>
+              My Orders
+            </button>
+
+            <button style={styles.navButton} onClick={() => navigate("/wishlist")}>
+              Wishlist
+            </button>
+
             <button style={styles.navButton} onClick={() => navigate("/profile")}>
               👤 {user.name?.split(" ")[0] || "Profile"}
             </button>
+
             {(user.role === "SALES_MANAGER" || user.role === "PRODUCT_MANAGER") && (
-              <button style={styles.navButton} onClick={() => navigate("/admin")}>Admin</button>
+              <button style={styles.navButton} onClick={() => navigate("/admin")}>
+                Admin
+              </button>
             )}
+
             <button style={{ ...styles.navButton, ...styles.logoutBtn }} onClick={handleLogout}>
               Logout
             </button>
           </>
         ) : (
           <>
-            <button style={styles.navButton} onClick={() => navigate("/login")}>Login</button>
-            <button style={{ ...styles.navButton, ...styles.registerBtn }} onClick={() => navigate("/register")}>
+            <button style={styles.navButton} onClick={() => navigate("/login")}>
+              Login
+            </button>
+
+            <button
+              style={{ ...styles.navButton, ...styles.registerBtn }}
+              onClick={() => navigate("/register")}
+            >
               Register
             </button>
           </>
@@ -74,17 +96,45 @@ function App() {
   return (
     <Router>
       <Navbar />
+
       <Routes>
         <Route path="/" element={<Navigate to="/products" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Registration />} />
+
         <Route path="/products" element={<ProductList />} />
+        <Route path="/products/:id" element={<ProductDetailPage />} />
+
         <Route path="/cart" element={<CartPage />} />
         <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/orders" element={<PrivateRoute><OrdersPage /></PrivateRoute>} />
-        <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
-        <Route path="/checkout" element={<PrivateRoute><CheckoutPage /></PrivateRoute>} />
+
+        <Route
+          path="/orders"
+          element={
+            <PrivateRoute>
+              <OrdersPage />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <PrivateRoute>
+              <AdminPage />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/checkout"
+          element={
+            <PrivateRoute>
+              <CheckoutPage />
+            </PrivateRoute>
+          }
+        />
       </Routes>
     </Router>
   );

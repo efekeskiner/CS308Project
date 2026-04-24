@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { isInWishlist, toggleWishlist } from "../services/wishlist";
-
 
 function ProductCard({ product, onAddToCart }) {
   const [wishlisted, setWishlisted] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (product) {
@@ -11,17 +12,32 @@ function ProductCard({ product, onAddToCart }) {
     }
   }, [product]);
 
-  const handleWishlistToggle = () => {
+  const handleCardClick = () => {
+    navigate(`/products/${product.id}`);
+  };
+
+  const handleWishlistToggle = (event) => {
+    event.stopPropagation();
+
     const updatedWishlist = toggleWishlist(product);
     const exists = updatedWishlist.some((item) => item.id === product.id);
     setWishlisted(exists);
   };
+
+  const handleAddToCart = (event) => {
+    event.stopPropagation();
+    onAddToCart(product);
+  };
+
   if (!product) return null;
 
   return (
-    <div style={styles.card}>
+    <div style={styles.card} onClick={handleCardClick}>
       <img
-        src={product.image}
+        src={
+          product.imageUrl ||
+          "https://via.placeholder.com/150?text=No+Image"
+        }
         alt={product.name || "Book"}
         style={styles.image}
       />
@@ -30,7 +46,7 @@ function ProductCard({ product, onAddToCart }) {
 
       <p style={styles.author}>by {product.author || "Unknown Author"}</p>
 
-      <p style={styles.category}>{product.category || "Uncategorized"}</p>
+      <p style={styles.category}>{product.categoryName || "Uncategorized"}</p>
 
       <p style={styles.model}>{product.model || "-"}</p>
 
@@ -44,10 +60,6 @@ function ProductCard({ product, onAddToCart }) {
 
       <p>
         <strong>Distributor:</strong> {product.distributorInfo || "-"}
-      </p>
-
-      <p>
-        <strong>Language:</strong> {product.language || "-"}
       </p>
 
       <p>
@@ -73,19 +85,20 @@ function ProductCard({ product, onAddToCart }) {
           ...(product.inStock ? {} : styles.disabledButton),
         }}
         disabled={!product.inStock}
-        onClick={() => onAddToCart(product)}
+        onClick={handleAddToCart}
       >
         {product.inStock ? "Add to Cart" : "Out of Stock"}
       </button>
+
       <button
-  style={{
-    ...styles.wishlistButton,
-    ...(wishlisted ? styles.wishlisted : {}),
-  }}
-  onClick={handleWishlistToggle}
->
-  {wishlisted ? "♥ Remove from Wishlist" : "♡ Add to Wishlist"}
-</button>
+        style={{
+          ...styles.wishlistButton,
+          ...(wishlisted ? styles.wishlisted : {}),
+        }}
+        onClick={handleWishlistToggle}
+      >
+        {wishlisted ? "♥ Remove from Wishlist" : "♡ Add to Wishlist"}
+      </button>
     </div>
   );
 }
@@ -98,6 +111,7 @@ const styles = {
     boxShadow: "0 4px 14px rgba(0, 0, 0, 0.08)",
     textAlign: "center",
     transition: "transform 0.2s ease",
+    cursor: "pointer",
   },
   image: {
     width: "100%",
