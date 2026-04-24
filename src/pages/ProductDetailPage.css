@@ -198,6 +198,25 @@
   font-weight: bold;
 }
 
+.price-section {
+  margin: 10px 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.original-price {
+  text-decoration: line-through;
+  color: #8b7b72;
+  font-size: 18px;
+}
+
+.discounted-price {
+  font-size: 30px;
+  font-weight: bold;
+  color: #2f1e14;
+}
+
 @media (max-width: 800px) {
   .product-detail-card {
     grid-template-columns: 1fr;
