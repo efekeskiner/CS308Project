@@ -7,38 +7,39 @@ import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import WishlistPage from "./pages/WishlistPage";
 import ProfilePage from "./pages/ProfilePage";
+import ProductDetailPage from "./pages/ProductDetailPage";
 
 function App() {
-    return (
-          <Router>
-             <div style={styles.navbar}>
-  <button
-    style={styles.navButton}
-    onClick={() => window.location.href = "/products"}
-  >
-    Products
-  </button>
+  return (
+    <Router>
+      <div style={styles.navbar}>
+        <button
+          style={styles.navButton}
+          onClick={() => window.location.href = "/products"}
+        >
+          Products
+        </button>
 
-  <button
-    style={styles.navButton}
-    onClick={() => window.location.href = "/cart"}
-  >
-    Cart
-  </button>
+        <button
+          style={styles.navButton}
+          onClick={() => window.location.href = "/cart"}
+        >
+          Cart
+        </button>
 
-  <button
-    style={styles.navButton}
-    onClick={() => window.location.href = "/profile"}
-  >
-    Profile
-  </button>
-</div>
-            <Routes>
-              <Route path="/" element={<Navigate to="/products" />} />
+        <button
+          style={styles.navButton}
+          onClick={() => window.location.href = "/profile"}
+        >
+          Profile
+        </button>
+      </div>
+
+      <Routes>
+        <Route path="/" element={<Navigate to="/products" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Registration />} />
         <Route path="/cart" element={<CartPage />} />
-
         <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/profile" element={<ProfilePage />} />
 
@@ -52,20 +53,12 @@ function App() {
         />
 
         <Route path="/products" element={<ProductList />} />
-
-        {/* <Route
-          path="/products"
-          element={
-                        <PrivateRoute>
-                          <ProductList />
-            </PrivateRoute>
-}
-        /> */}
-
-          </Routes>
-          </Router>
+        <Route path="/products/:id" element={<ProductDetailPage />} />
+      </Routes>
+    </Router>
   );
 }
+
 const styles = {
   navbar: {
     display: "flex",
@@ -83,4 +76,5 @@ const styles = {
     cursor: "pointer",
   },
 };
+
 export default App;
