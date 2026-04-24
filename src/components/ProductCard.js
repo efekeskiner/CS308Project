@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { isInWishlist, toggleWishlist } from "../services/wishlist";
-
 
 function ProductCard({ product, onAddToCart }) {
   const [wishlisted, setWishlisted] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (product) {
@@ -11,15 +12,27 @@ function ProductCard({ product, onAddToCart }) {
     }
   }, [product]);
 
-  const handleWishlistToggle = () => {
+  const handleCardClick = () => {
+    navigate(`/products/${product.id}`);
+  };
+
+  const handleWishlistToggle = (event) => {
+    event.stopPropagation();
+
     const updatedWishlist = toggleWishlist(product);
     const exists = updatedWishlist.some((item) => item.id === product.id);
     setWishlisted(exists);
   };
+
+  const handleAddToCart = (event) => {
+    event.stopPropagation();
+    onAddToCart(product);
+  };
+
   if (!product) return null;
 
   return (
-    <div style={styles.card}>
+    <div style={styles.card} onClick={handleCardClick}>
       <img
         src={
           product.imageUrl ||
@@ -72,19 +85,20 @@ function ProductCard({ product, onAddToCart }) {
           ...(product.inStock ? {} : styles.disabledButton),
         }}
         disabled={!product.inStock}
-        onClick={() => onAddToCart(product)}
+        onClick={handleAddToCart}
       >
         {product.inStock ? "Add to Cart" : "Out of Stock"}
       </button>
+
       <button
-  style={{
-    ...styles.wishlistButton,
-    ...(wishlisted ? styles.wishlisted : {}),
-  }}
-  onClick={handleWishlistToggle}
->
-  {wishlisted ? "♥ Remove from Wishlist" : "♡ Add to Wishlist"}
-</button>
+        style={{
+          ...styles.wishlistButton,
+          ...(wishlisted ? styles.wishlisted : {}),
+        }}
+        onClick={handleWishlistToggle}
+      >
+        {wishlisted ? "♥ Remove from Wishlist" : "♡ Add to Wishlist"}
+      </button>
     </div>
   );
 }
@@ -97,6 +111,7 @@ const styles = {
     boxShadow: "0 4px 14px rgba(0, 0, 0, 0.08)",
     textAlign: "center",
     transition: "transform 0.2s ease",
+    cursor: "pointer",
   },
   image: {
     width: "100%",
