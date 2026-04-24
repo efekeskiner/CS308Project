@@ -53,7 +53,7 @@ function ProductList() {
     } else if (sortBy === "priceDesc") {
       filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
     } else if (sortBy === "popularity") {
-      filtered.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+      filtered.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
     }
 
     return filtered;

@@ -165,13 +165,24 @@ function ProductDetailPage() {
             {product.description || "No description available."}
           </p>
 
+          <div className="price-section">
+            {product.discountRate > 0 && (
+              <span className="original-price">
+                {product.originalPrice} TL
+              </span>
+            )}
+
+            <span className="discounted-price">
+              {product.price} TL
+            </span>
+          </div>
+
           <div className="info-grid">
             <p><strong>Model:</strong> {product.model || "-"}</p>
             <p><strong>ISBN:</strong> {product.serialNumber || "-"}</p>
             <p><strong>Distributor:</strong> {product.distributorInfo || "-"}</p>
             <p><strong>Warranty:</strong> {product.warrantyStatus || "-"}</p>
             <p><strong>Stock:</strong> {inStock ? product.quantityInStock : "Out of stock"}</p>
-            <p><strong>Price:</strong> {product.price ?? 0} TL</p>
             <p>
               <strong>Average Rating:</strong> {averageRating}
               {ratingCount !== undefined && ratingCount !== null ? ` (${ratingCount})` : ""}
