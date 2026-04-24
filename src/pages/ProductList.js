@@ -53,7 +53,14 @@ function ProductList() {
     } else if (sortBy === "priceDesc") {
       filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
     } else if (sortBy === "popularity") {
-      filtered.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+      filtered.sort((a, b) => {
+        const scoreA =
+          (Number(a.averageRating) || 0) * (Number(a.ratingCount) || 0);
+        const scoreB =
+          (Number(b.averageRating) || 0) * (Number(b.ratingCount) || 0);
+
+        return scoreB - scoreA;
+      });
     }
 
     return filtered;
