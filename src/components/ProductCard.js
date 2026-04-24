@@ -31,52 +31,52 @@ function ProductCard({ product, onAddToCart }) {
 
   if (!product) return null;
 
+  const hasDiscount = Number(product.discountRate) > 0;
+
   return (
     <div style={styles.card} onClick={handleCardClick}>
       <img
-        src={
-          product.imageUrl ||
-          "https://via.placeholder.com/150?text=No+Image"
-        }
+        src={product.imageUrl || "https://via.placeholder.com/150?text=No+Image"}
         alt={product.name || "Book"}
         style={styles.image}
       />
 
       <h3 style={styles.name}>{product.name || "No Name"}</h3>
 
-      <p style={styles.author}>by {product.author || "Unknown Author"}</p>
-
       <p style={styles.category}>{product.categoryName || "Uncategorized"}</p>
-
-      <p style={styles.model}>{product.model || "-"}</p>
 
       <p style={styles.description}>
         {product.description || "No description available"}
       </p>
 
-      <p>
-        <strong>ISBN:</strong> {product.serialNumber || "-"}
+      <div style={styles.priceContainer}>
+        {hasDiscount && (
+          <span style={styles.originalPrice}>
+            {Number(product.originalPrice).toFixed(2)} TL
+          </span>
+        )}
+
+        <span style={styles.price}>
+          {Number(product.price ?? 0).toFixed(2)} TL
+        </span>
+
+        {hasDiscount && (
+          <span style={styles.discountRate}>
+            %{Number(product.discountRate)} off
+          </span>
+        )}
+      </div>
+
+      <p style={styles.rating}>
+        ★{" "}
+        {product.averageRating !== null && product.averageRating !== undefined
+          ? Number(product.averageRating).toFixed(1)
+          : "N/A"}
+        <span style={styles.ratingCount}> ({product.ratingCount ?? 0})</span>
       </p>
 
-      <p>
-        <strong>Distributor:</strong> {product.distributorInfo || "-"}
-      </p>
-
-      <p>
-        <strong>Warranty:</strong> {product.warrantyStatus || "-"}
-      </p>
-
-      <p>
-        <strong>Price:</strong> {product.price ?? 0} TL
-      </p>
-
-      <p>
-        <strong>Rating:</strong> {product.averageRating ?? "N/A"}
-      </p>
-
-      <p>
-        <strong>Stock:</strong>{" "}
-        {product.inStock ? product.quantityInStock ?? 0 : "Out of stock"}
+      <p style={styles.stock}>
+        Stock: {product.inStock ? product.quantityInStock ?? 0 : "Out of stock"}
       </p>
 
       <button
@@ -125,27 +125,57 @@ const styles = {
     marginBottom: "8px",
     color: "#2f1e14",
   },
-  author: {
-    fontSize: "16px",
-    color: "#6b5b53",
-    marginBottom: "6px",
-  },
   category: {
     fontSize: "14px",
     color: "#8b5e3c",
     marginBottom: "8px",
     fontWeight: "bold",
   },
-  model: {
-    fontSize: "15px",
-    color: "#555",
-    marginBottom: "10px",
-  },
   description: {
     fontSize: "15px",
     color: "#444",
     marginBottom: "12px",
     minHeight: "60px",
+  },
+  priceContainer: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "8px",
+    flexWrap: "wrap",
+    marginBottom: "10px",
+  },
+  originalPrice: {
+    textDecoration: "line-through",
+    color: "#8b7b72",
+    fontSize: "16px",
+  },
+  price: {
+    fontSize: "24px",
+    fontWeight: "bold",
+    color: "#2f1e14",
+  },
+  discountRate: {
+    fontSize: "13px",
+    fontWeight: "bold",
+    color: "#8b5e3c",
+  },
+  rating: {
+    fontSize: "15px",
+    fontWeight: "bold",
+    color: "#4b2e2e",
+    marginBottom: "8px",
+  },
+  ratingCount: {
+    fontSize: "12px",
+    color: "#777",
+    fontWeight: "normal",
+  },
+  stock: {
+    fontSize: "15px",
+    fontWeight: "bold",
+    color: "#2f1e14",
+    marginBottom: "8px",
   },
   button: {
     marginTop: "12px",
