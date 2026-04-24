@@ -21,7 +21,10 @@ function ProductCard({ product, onAddToCart }) {
   return (
     <div style={styles.card}>
       <img
-        src={product.image}
+        src={
+          product.imageUrl ||
+          "https://via.placeholder.com/150?text=No+Image"
+        }
         alt={product.name || "Book"}
         style={styles.image}
       />
@@ -30,7 +33,7 @@ function ProductCard({ product, onAddToCart }) {
 
       <p style={styles.author}>by {product.author || "Unknown Author"}</p>
 
-      <p style={styles.category}>{product.category || "Uncategorized"}</p>
+      <p style={styles.category}>{product.categoryName || "Uncategorized"}</p>
 
       <p style={styles.model}>{product.model || "-"}</p>
 
@@ -44,10 +47,6 @@ function ProductCard({ product, onAddToCart }) {
 
       <p>
         <strong>Distributor:</strong> {product.distributorInfo || "-"}
-      </p>
-
-      <p>
-        <strong>Language:</strong> {product.language || "-"}
       </p>
 
       <p>
