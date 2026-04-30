@@ -1,23 +1,51 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { addToCart, getCart } from "../services/cart";
 import ProductCard from "../components/ProductCard";
-import mockProducts from "../data/mockProducts";
+import { getProducts } from "../services/products";
 
 function ProductList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("default");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const navigate = useNavigate();
   const [cartCount, setCartCount] = useState(
     getCart().reduce((sum, item) => sum + item.quantity, 0)
   );
 
-  const categories = ["All", ...new Set(mockProducts.map((p) => p.category))];
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    setError(false);
+
+    getProducts()
+      .then((data) => {
+        if (!isMounted) return;
+        setProducts(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setError(true);
+        setProducts([]);
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const categories = ["All", ...new Set(products.map((p) => p.category))];
 
   const filteredProducts = useMemo(() => {
-    let filtered = mockProducts.filter((product) => {
+    let filtered = products.filter((product) => {
       const searchText =
         `${product.name} ${product.description} ${product.author}`.toLowerCase();
 
@@ -37,7 +65,7 @@ function ProductList() {
     }
 
     return filtered;
-  }, [searchTerm, sortBy, selectedCategory]);
+  }, [products, searchTerm, sortBy, selectedCategory]);
 
   const handleAddToCart = (product) => {
     if (!product.inStock) return;
@@ -95,15 +123,24 @@ function ProductList() {
         </select>
       </div>
 
-      <div style={styles.grid}>
-        {filteredProducts.length > 0 ? (
-          filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
-          ))
-        ) : (
-          <p style={styles.noResult}>No books found.</p>
-        )}
-      </div>
+      {loading && <p style={styles.noResult}>Loading products...</p>}
+      {!loading && error && <p style={styles.noResult}>Failed to load products.</p>}
+
+      {!loading && !error && (
+        <div style={styles.grid}>
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onAddToCart={handleAddToCart}
+              />
+            ))
+          ) : (
+            <p style={styles.noResult}>No books found.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
