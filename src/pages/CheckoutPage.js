@@ -3,23 +3,25 @@ import { useNavigate } from "react-router-dom";
 import "./CheckoutPage.css";
 import { getCart, clearCart, getCartTotal } from "../services/cart";
 import { getCurrentUser } from "../services/auth";
+import { placeOrder } from "../services/orders";
 
 function CheckoutPage() {
   const navigate = useNavigate();
   const cartItems = getCart();
   const currentUser = getCurrentUser();
 
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState(currentUser?.homeAddress || "");
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvv, setCvv] = useState("");
   const [orderPlaced, setOrderPlaced] = useState(false);
-  const [mockInvoiceId, setMockInvoiceId] = useState(null);
+  const [placedOrder, setPlacedOrder] = useState(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const totalPrice = useMemo(() => getCartTotal(cartItems), [cartItems]);
 
-  const handlePlaceOrder = (e) => {
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
 
     if (cartItems.length === 0) {
@@ -33,50 +35,50 @@ function CheckoutPage() {
     }
 
     setError("");
+    setLoading(true);
 
-    const mockOrderPayload = {
-      items: cartItems.map((item) => ({
+    try {
+      const items = cartItems.map((item) => ({
         productId: item.id,
         quantity: item.quantity,
-      })),
-      creditCard: {
-        number: cardNumber,
-        expiry,
-        cvv,
-      },
-    };
+      }));
+      const creditCard = { number: cardNumber.replace(/\s/g, ""), expiry, cvv };
 
-    console.log("Mock checkout payload:", mockOrderPayload);
-
-    const generatedInvoiceId = Math.floor(Math.random() * 100000) + 1;
-    setMockInvoiceId(generatedInvoiceId);
-    setOrderPlaced(true);
-    clearCart();
+      const order = await placeOrder(items, creditCard);
+      setPlacedOrder(order);
+      setOrderPlaced(true);
+      clearCart();
+    } catch (err) {
+      setError(err.message || "Order could not be placed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (orderPlaced) {
+  if (orderPlaced && placedOrder) {
     return (
       <div className="checkout-page">
         <div className="checkout-container success-card">
           <p className="checkout-brand">Online Bookstore</p>
-          <h1>Order Placed Successfully</h1>
+          <h1>Order Placed Successfully! 🎉</h1>
           <p className="checkout-subtitle">
-            Your order has been created in the mock frontend flow.
+            Your order is being processed. You will receive an invoice by email.
           </p>
 
           <div className="invoice-box">
             <p><strong>Customer:</strong> {currentUser?.name || "Customer"}</p>
-            <p><strong>Invoice ID:</strong> {mockInvoiceId}</p>
-            <p><strong>Total Paid:</strong> ₺{totalPrice.toFixed(2)}</p>
-            <p><strong>Status:</strong> PROCESSING</p>
+            <p><strong>Order ID:</strong> #{placedOrder.id}</p>
+            <p><strong>Invoice ID:</strong> {placedOrder.invoiceId || "Generating..."}</p>
+            <p><strong>Total Paid:</strong> ₺{Number(placedOrder.totalPrice).toFixed(2)}</p>
+            <p><strong>Status:</strong> {placedOrder.status || "PROCESSING"}</p>
           </div>
 
           <div className="success-actions">
-            <button className="primary-btn" onClick={() => navigate("/products")}>
-              Back to Products
+            <button className="primary-btn" onClick={() => navigate("/orders")}>
+              View My Orders
             </button>
-            <button className="outline-btn" onClick={() => navigate("/orders")}>
-              Go to Orders Later
+            <button className="outline-btn" onClick={() => navigate("/products")}>
+              Continue Shopping
             </button>
           </div>
         </div>
@@ -166,8 +168,8 @@ function CheckoutPage() {
 
               {error && <p className="error-text">{error}</p>}
 
-              <button type="submit" className="primary-btn full-width-btn">
-                Place Order
+              <button type="submit" className="primary-btn full-width-btn" disabled={loading}>
+                {loading ? "Placing Order..." : "Place Order"}
               </button>
             </form>
 
@@ -196,8 +198,7 @@ function CheckoutPage() {
               </div>
 
               <p className="summary-note">
-                This page is frontend-only for now. Later, it will call the order API with
-                items and credit card info.
+                Payment is securely processed. Your invoice will be emailed after order confirmation.
               </p>
             </div>
           </div>
