@@ -8,16 +8,22 @@ public class UserDto {
     private final String name;
     private final String email;
     private final Role role;
+    private final String taxId;
+    private final String homeAddress;
 
     public UserDto(User user) {
         this.id = user.getId();
         this.name = user.getName();
         this.email = user.getEmail();
         this.role = user.getRole();
+        this.taxId = user.getTaxId();
+        this.homeAddress = user.getHomeAddress();
     }
 
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getEmail() { return email; }
     public Role getRole() { return role; }
+    public String getTaxId() { return taxId; }
+    public String getHomeAddress() { return homeAddress; }
 }
