@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { isInWishlist, toggleWishlist } from "../services/wishlist";
+import { isLoggedIn, authFetch } from "../services/auth";
+
+const WISHLIST_API = "http://localhost:8080/api/wishlist";
 
 function ProductCard({ product, onAddToCart }) {
   const [wishlisted, setWishlisted] = useState(false);
@@ -16,12 +19,27 @@ function ProductCard({ product, onAddToCart }) {
     navigate(`/products/${product.id}`);
   };
 
-  const handleWishlistToggle = (event) => {
+  const handleWishlistToggle = async (event) => {
     event.stopPropagation();
 
     const updatedWishlist = toggleWishlist(product);
-    const exists = updatedWishlist.some((item) => item.id === product.id);
-    setWishlisted(exists);
+    const nowWishlisted = updatedWishlist.some((item) => item.id === product.id);
+    setWishlisted(nowWishlisted);
+
+    if (isLoggedIn()) {
+      try {
+        if (nowWishlisted) {
+          await authFetch(WISHLIST_API, {
+            method: "POST",
+            body: JSON.stringify({ productId: product.id }),
+          });
+        } else {
+          await authFetch(`${WISHLIST_API}/${product.id}`, { method: "DELETE" });
+        }
+      } catch (_) {
+        // localStorage already updated; backend sync failure is non-critical
+      }
+    }
   };
 
   const handleAddToCart = (event) => {
