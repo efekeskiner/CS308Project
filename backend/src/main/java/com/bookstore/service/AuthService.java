@@ -51,6 +51,7 @@ import org.springframework.stereotype.Service;
                 user.setEmail(request.getEmail());
                 user.setPasswordHash(hash);
                 user.setTaxId(request.getPhone());
+                user.setHomeAddress(request.getHomeAddress());
                 user.setRole(Role.CUSTOMER);
                 userRepository.save(user);
 

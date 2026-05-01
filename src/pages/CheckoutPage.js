@@ -44,7 +44,7 @@ function CheckoutPage() {
       }));
       const creditCard = { number: cardNumber.replace(/\s/g, ""), expiry, cvv };
 
-      const order = await placeOrder(items, creditCard);
+      const order = await placeOrder(items, creditCard, address);
       setPlacedOrder(order);
       setOrderPlaced(true);
       clearCart();

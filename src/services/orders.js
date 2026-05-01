@@ -14,18 +14,18 @@ export async function getMyOrders() {
   return response.json();
 }
 
-export async function placeOrder(items, creditCard) {
+export async function placeOrder(items, creditCard, deliveryAddress) {
   const response = await fetch(API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeaders(),
     },
-    body: JSON.stringify({ items, creditCard }),
+    body: JSON.stringify({ items, creditCard, deliveryAddress }),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || "Failed to place order");
+    throw new Error(err.error || "Failed to place order");
   }
   return response.json();
 }

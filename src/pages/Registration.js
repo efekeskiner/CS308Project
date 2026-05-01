@@ -8,7 +8,7 @@ function Registration() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [name, setName]                               = useState("");
   const [email, setEmail]                             = useState("");
-  const [taxId, setTaxId]                             = useState("");
+  const [phone, setPhone]                             = useState("");
   const [homeAddress, setHomeAddress]                 = useState("");
   const [password, setPassword]                       = useState("");
   const [confirmPassword, setConfirmPassword]         = useState("");
@@ -19,7 +19,7 @@ function Registration() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !taxId.trim() || !homeAddress.trim() || !password.trim() || !confirmPassword.trim()) {
+    if (!name.trim() || !email.trim() || !phone.trim() || !homeAddress.trim() || !password.trim() || !confirmPassword.trim()) {
       setFormError("Please fill in all fields.");
       return;
     }
@@ -32,7 +32,7 @@ function Registration() {
     setPasswordError("");
     setLoading(true);
     try {
-      await register(name, email, taxId, homeAddress, password);
+      await register(name, email, phone, homeAddress, password);
       navigate("/login");
     } catch (err) {
       setFormError(err.message || "Registration failed. Please try again.");
@@ -61,10 +61,10 @@ function Registration() {
             onChange={(e) => { setEmail(e.target.value); setFormError(""); }}
           />
 
-          <label htmlFor="taxId">Tax ID</label>
+          <label htmlFor="phone">Phone Number</label>
           <input
-            id="taxId" type="text" placeholder="Enter your Tax ID" value={taxId}
-            onChange={(e) => { setTaxId(e.target.value); setFormError(""); }}
+            id="phone" type="text" placeholder="Enter your phone number" value={phone}
+            onChange={(e) => { setPhone(e.target.value); setFormError(""); }}
           />
 
           <label htmlFor="homeAddress">Home Address</label>

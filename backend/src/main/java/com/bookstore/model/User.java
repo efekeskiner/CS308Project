@@ -21,7 +21,7 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(name = "tax_id")
+    @Column(name = "phone")
     private String taxId;
 
     @Column(name = "home_address", columnDefinition = "TEXT")

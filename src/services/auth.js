@@ -17,11 +17,11 @@ export async function login(email, password) {
     return data;
 }
 
-export async function register(name, email, taxId, homeAddress, password) {
+export async function register(name, email, phone, homeAddress, password) {
     const res = await fetch(`${BASE_URL}/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, taxId, homeAddress, password }),
+          body: JSON.stringify({ name, email, phone, homeAddress, password }),
     });
     if (!res.ok) {
           const err = await res.json().catch(() => ({}));
