@@ -17,8 +17,13 @@ public class OrderDto {
     private final String customerName;
     private final String deliveryAddress;
     private final List<OrderItemDto> items;
+    private final Long invoiceId;
 
     public OrderDto(Order order) {
+        this(order, null);
+    }
+
+    public OrderDto(Order order, Long invoiceId) {
         this.id = order.getId();
         this.status = order.getStatus();
         this.totalPrice = order.getTotalPrice();
@@ -28,6 +33,7 @@ public class OrderDto {
         this.deliveryAddress = order.getDeliveryAddress();
         this.items = order.getItems() == null ? List.of()
                 : order.getItems().stream().map(OrderItemDto::new).collect(Collectors.toList());
+        this.invoiceId = invoiceId;
     }
 
     public Long getId() { return id; }
@@ -38,4 +44,5 @@ public class OrderDto {
     public String getCustomerName() { return customerName; }
     public String getDeliveryAddress() { return deliveryAddress; }
     public List<OrderItemDto> getItems() { return items; }
+    public Long getInvoiceId() { return invoiceId; }
 }

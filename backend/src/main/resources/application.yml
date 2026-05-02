@@ -13,6 +13,18 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: shngrkmshn@gmail.com
+    password: ryrx kkoz opoe fsop
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 server:
   port: 8080
 
@@ -21,3 +33,5 @@ app:
     secret: "bookstore-super-secret-key-minimum-256-bit-long-for-hs256-algorithm"
     expiration-ms: 86400000
     refresh-expiration-ms: 604800000
+  invoice:
+    storage-path: ./invoices

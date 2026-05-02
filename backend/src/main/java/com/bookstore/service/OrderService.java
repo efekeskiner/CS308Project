@@ -5,6 +5,7 @@ import com.bookstore.dto.OrderItemRequest;
 import com.bookstore.dto.PlaceOrderRequest;
 import com.bookstore.model.*;
 import com.bookstore.repository.DeliveryRepository;
+import com.bookstore.repository.InvoiceRepository;
 import com.bookstore.repository.OrderRepository;
 import com.bookstore.repository.ProductRepository;
 import org.springframework.data.domain.Page;
@@ -24,13 +25,25 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final DeliveryRepository deliveryRepository;
+    private final MockPaymentService mockPaymentService;
+    private final InvoiceService invoiceService;
+    private final EmailService emailService;
+    private final InvoiceRepository invoiceRepository;
 
     public OrderService(OrderRepository orderRepository,
                         ProductRepository productRepository,
-                        DeliveryRepository deliveryRepository) {
+                        DeliveryRepository deliveryRepository,
+                        MockPaymentService mockPaymentService,
+                        InvoiceService invoiceService,
+                        EmailService emailService,
+                        InvoiceRepository invoiceRepository) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.deliveryRepository = deliveryRepository;
+        this.mockPaymentService = mockPaymentService;
+        this.invoiceService = invoiceService;
+        this.emailService = emailService;
+        this.invoiceRepository = invoiceRepository;
     }
 
     @Transactional
@@ -79,7 +92,18 @@ public class OrderService {
             deliveryRepository.save(delivery);
         }
 
-        return new OrderDto(saved);
+        // mock payment — always succeeds for non-null card input
+        mockPaymentService.charge(req.getCreditCard(), total);
+
+        // generate invoice PDF and persist record
+        Invoice invoice = invoiceService.createInvoice(saved, user);
+
+        // send email asynchronously — failure does not affect order
+        emailService.sendInvoiceEmail(
+                user.getEmail(), user.getName(),
+                saved.getId(), saved.getTotalPrice(), invoice.getPdfPath());
+
+        return new OrderDto(saved, invoice.getId());
     }
 
     @Transactional
@@ -112,7 +136,8 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order " + orderId + " not found"));
         assertCanView(order, user);
-        return new OrderDto(order);
+        Long invoiceId = invoiceRepository.findByOrderId(order.getId()).map(Invoice::getId).orElse(null);
+        return new OrderDto(order, invoiceId);
     }
 
     @Transactional(readOnly = true)
@@ -126,7 +151,10 @@ public class OrderService {
         } else {
             orders = orderRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
         }
-        return orders.map(OrderDto::new);
+        return orders.map(o -> {
+            Long invoiceId = invoiceRepository.findByOrderId(o.getId()).map(Invoice::getId).orElse(null);
+            return new OrderDto(o, invoiceId);
+        });
     }
 
     private void assertCanView(Order order, User user) {

@@ -40,7 +40,7 @@ public class DeliveryDto {
     public Integer getQuantity() { return quantity; }
     public BigDecimal getTotalPrice() { return totalPrice; }
     public String getDeliveryAddress() { return deliveryAddress; }
-    public boolean isCompleted() { return isCompleted; }
+    public boolean getIsCompleted() { return isCompleted; }
     public Long getOrderId() { return orderId; }
     public OrderStatus getOrderStatus() { return orderStatus; }
 }

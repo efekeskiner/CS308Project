@@ -57,6 +57,7 @@ public class SecurityConfig {
                 .antMatchers(HttpMethod.PUT, "/api/categories/**").hasRole("PRODUCT_MANAGER")
                 .antMatchers(HttpMethod.DELETE, "/api/categories/**").hasRole("PRODUCT_MANAGER")
                 .antMatchers("/api/deliveries/**").hasRole("PRODUCT_MANAGER")
+                .antMatchers(HttpMethod.GET, "/api/invoices").hasRole("SALES_MANAGER")
                 .anyRequest().authenticated()
             .and()
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

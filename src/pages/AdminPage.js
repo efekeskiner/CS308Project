@@ -98,7 +98,7 @@ function DeliveriesPanel() {
     setLoading(true);
     authFetch(`${BASE_URL}/deliveries`)
       .then((r) => r.json())
-      .then((d) => setDeliveries(Array.isArray(d) ? d : []))
+      .then((d) => setDeliveries(Array.isArray(d) ? d : (d.content ?? [])))
       .finally(() => setLoading(false));
   };
   useEffect(() => { fetch_(); }, []);
@@ -126,10 +126,12 @@ function DeliveriesPanel() {
           <p style={styles.metaText}>Product: {d.productName} × {d.quantity}</p>
           <p style={styles.metaText}>Address: {d.deliveryAddress}</p>
           <p style={styles.metaText}>Total: ₺{Number(d.totalPrice).toFixed(2)}</p>
-          <p style={styles.metaText}>Status: <strong>{d.isCompleted ? "Completed" : "Pending"}</strong></p>
-          {!d.isCompleted && (
+          <p style={styles.metaText}>Status: <strong>{d.orderStatus || "PROCESSING"}</strong></p>
+          {d.orderStatus !== "DELIVERED" && d.orderStatus !== "CANCELLED" && (
             <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-              <button style={styles.actionBtn} onClick={() => updateStatus(d.id, "IN_TRANSIT")}>Mark In-Transit</button>
+              {d.orderStatus === "PROCESSING" && (
+                <button style={styles.actionBtn} onClick={() => updateStatus(d.id, "IN_TRANSIT")}>Mark In-Transit</button>
+              )}
               <button style={styles.approveBtn} onClick={() => updateStatus(d.id, "DELIVERED")}>Mark Delivered</button>
             </div>
           )}
