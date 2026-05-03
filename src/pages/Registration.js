@@ -8,7 +8,7 @@ function Registration() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [name, setName]                               = useState("");
   const [email, setEmail]                             = useState("");
-  const [phone, setPhone]                             = useState("");
+  const [taxId, setTaxId]                             = useState("");
   const [homeAddress, setHomeAddress]                 = useState("");
   const [password, setPassword]                       = useState("");
   const [confirmPassword, setConfirmPassword]         = useState("");
@@ -19,7 +19,7 @@ function Registration() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !phone.trim() || !homeAddress.trim() || !password.trim() || !confirmPassword.trim()) {
+    if (!name.trim() || !email.trim() || !taxId.trim() || !homeAddress.trim() || !password.trim() || !confirmPassword.trim()) {
       setFormError("Please fill in all fields.");
       return;
     }
@@ -32,7 +32,7 @@ function Registration() {
     setPasswordError("");
     setLoading(true);
     try {
-      await register(name, email, phone, homeAddress, password);
+      await register(name, email, taxId, homeAddress, password);
       navigate("/login");
     } catch (err) {
       setFormError(err.message || "Registration failed. Please try again.");
@@ -44,7 +44,7 @@ function Registration() {
   return (
     <div className="page">
       <div className="register-card">
-        <div className="brand">Online Store</div>
+        <div className="brand">Online Bookstore</div>
         <h1>Create Account</h1>
         <p className="subtitle">Sign up to start shopping and manage your account</p>
         <form className="register-form" onSubmit={handleSubmit}>
@@ -61,10 +61,13 @@ function Registration() {
             onChange={(e) => { setEmail(e.target.value); setFormError(""); }}
           />
 
-          <label htmlFor="phone">Phone Number</label>
+          <label htmlFor="taxId">Tax ID</label>
           <input
-            id="phone" type="text" placeholder="Enter your phone number" value={phone}
-            onChange={(e) => { setPhone(e.target.value); setFormError(""); }}
+            id="taxId"
+            type="text"
+            placeholder="Enter your tax ID"
+            value={taxId}
+            onChange={(e) => { setTaxId(e.target.value); setFormError(""); }}
           />
 
           <label htmlFor="homeAddress">Home Address</label>

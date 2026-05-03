@@ -13,10 +13,58 @@ function ProductCard({ product, onAddToCart, isAdded }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (product) {
-      setWishlisted(isInWishlist(product.id));
-    }
-  }, [product]);
+    let cancelled = false;
+
+    const loadWishlistStatus = async () => {
+      if (!product) return;
+
+      if (!isLoggedIn()) {
+        setWishlisted(isInWishlist(product.id));
+        return;
+      }
+
+      try {
+        const response = await authFetch(WISHLIST_API);
+
+        if (!response.ok) {
+          throw new Error("Wishlist could not be loaded");
+        }
+
+        const data = await response.json();
+
+        const wishlistItems = Array.isArray(data)
+          ? data
+          : data?.content || data?.data || data?.items || [];
+
+        const exists = wishlistItems.some((item) => {
+          const wishlistProductId =
+            item.product?.id ??
+            item.product?.productId ??
+            item.productId ??
+            item.book?.id ??
+            item.bookId ??
+            item.id;
+
+          return Number(wishlistProductId) === Number(product.id);
+        });
+
+        if (!cancelled) {
+          setWishlisted(exists);
+        }
+      } catch (err) {
+        console.error("Wishlist status could not be loaded:", err);
+        if (!cancelled) {
+          setWishlisted(false);
+        }
+      }
+    };
+
+    loadWishlistStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [product?.id]);
 
   const handleCardClick = () => {
     navigate(`/products/${product.id}`);
@@ -25,23 +73,34 @@ function ProductCard({ product, onAddToCart, isAdded }) {
   const handleWishlistToggle = async (event) => {
     event.stopPropagation();
 
-    const updatedWishlist = toggleWishlist(product);
-    const nowWishlisted = updatedWishlist.some((item) => item.id === product.id);
-    setWishlisted(nowWishlisted);
+    if (!isLoggedIn()) {
+      const updatedWishlist = toggleWishlist(product);
+      const nowWishlisted = updatedWishlist.some(
+        (item) => Number(item.id) === Number(product.id)
+      );
+      setWishlisted(nowWishlisted);
+      return;
+    }
 
-    if (isLoggedIn()) {
-      try {
-        if (nowWishlisted) {
-          await authFetch(WISHLIST_API, {
-            method: "POST",
-            body: JSON.stringify({ productId: product.id }),
-          });
-        } else {
-          await authFetch(`${WISHLIST_API}/${product.id}`, { method: "DELETE" });
-        }
-      } catch (_) {
-        // localStorage already updated; backend sync failure is non-critical
+    const previousWishlisted = wishlisted;
+    const nextWishlisted = !wishlisted;
+
+    setWishlisted(nextWishlisted);
+
+    try {
+      if (nextWishlisted) {
+        await authFetch(WISHLIST_API, {
+          method: "POST",
+          body: JSON.stringify({ productId: Number(product.id) }),
+        });
+      } else {
+        await authFetch(`${WISHLIST_API}/${product.id}`, {
+          method: "DELETE",
+        });
       }
+    } catch (err) {
+      console.error("Wishlist could not be updated:", err);
+      setWishlisted(previousWishlisted);
     }
   };
 
