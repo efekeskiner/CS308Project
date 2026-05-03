@@ -1,5 +1,6 @@
 package com.bookstore.controller;
 
+import com.bookstore.dto.UpdateProfileRequest;
 import com.bookstore.dto.LoginRequest;
 import com.bookstore.dto.LoginResponse;
 import com.bookstore.dto.RegisterRequest;
@@ -54,4 +55,16 @@ import java.util.Map;
                         }
                         return ResponseEntity.ok(new UserDto(user));
             }
+
+        @PutMapping("/me")
+        public ResponseEntity<?> updateMe(
+                        @AuthenticationPrincipal User user,
+                        @RequestBody UpdateProfileRequest request) {
+                if (user == null) {
+                                return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+                }
+
+                UserDto updatedUser = authService.updateProfile(user, request);
+                return ResponseEntity.ok(updatedUser);
+        }
     }

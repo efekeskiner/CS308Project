@@ -1,5 +1,6 @@
 package com.bookstore.service;
 
+import com.bookstore.dto.UpdateProfileRequest;
 import com.bookstore.dto.LoginRequest;
 import com.bookstore.dto.LoginResponse;
 import com.bookstore.dto.RegisterRequest;
@@ -57,6 +58,17 @@ import org.springframework.stereotype.Service;
 
                 return new RegisterResponse("Registration successful", new UserDto(user));
     }
+
+    public UserDto updateProfile(User currentUser, UpdateProfileRequest request) {
+                User user = userRepository.findById(currentUser.getId())
+                                        .orElseThrow(InvalidCredentialsException::new);
+
+                user.setName(request.getName());
+                user.setHomeAddress(request.getHomeAddress());
+
+                User savedUser = userRepository.save(user);
+                return new UserDto(savedUser);
+        }
 
     public static class InvalidCredentialsException extends RuntimeException {
                 public InvalidCredentialsException() {

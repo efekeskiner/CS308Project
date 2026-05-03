@@ -64,3 +64,19 @@ export function authFetch(url, options = {}) {
           },
     });
 }
+
+export async function updateCurrentUser(name, homeAddress) {
+    const res = await authFetch(`${BASE_URL}/me`, {
+          method: "PUT",
+          body: JSON.stringify({ name, homeAddress }),
+    });
+
+    if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || "Profile update failed");
+    }
+
+    const updatedUser = await res.json();
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+    return updatedUser;
+}
