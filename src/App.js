@@ -21,8 +21,18 @@ function Navbar() {
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
-    setUser(isLoggedIn() ? getCurrentUser() : null);
-    setCartCount(getCart().reduce((s, i) => s + i.quantity, 0));
+    const updateNavbar = () => {
+      setUser(isLoggedIn() ? getCurrentUser() : null);
+      setCartCount(getCart().reduce((s, i) => s + i.quantity, 0));
+    };
+
+    updateNavbar();
+
+    window.addEventListener("cartUpdated", updateNavbar);
+
+    return () => {
+      window.removeEventListener("cartUpdated", updateNavbar);
+    };
   }, [location]);
 
   const handleLogout = () => {
