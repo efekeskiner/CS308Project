@@ -13,17 +13,32 @@ import AdminPage from "./pages/AdminPage";
 import { isLoggedIn, getCurrentUser, logout } from "./services/auth";
 import { getCart } from "./services/cart";
 import { useState, useEffect } from "react";
+import "./App.css";
 
 function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [cartCount, setCartCount] = useState(0);
+  const [isCartBouncing, setIsCartBouncing] = useState(false);
 
   useEffect(() => {
     const updateNavbar = () => {
+      const newCartCount = getCart().reduce((s, i) => s + i.quantity, 0);
+
       setUser(isLoggedIn() ? getCurrentUser() : null);
-      setCartCount(getCart().reduce((s, i) => s + i.quantity, 0));
+
+      setCartCount((oldCartCount) => {
+        if (newCartCount > oldCartCount) {
+          setIsCartBouncing(true);
+
+          setTimeout(() => {
+            setIsCartBouncing(false);
+          }, 450);
+        }
+
+        return newCartCount;
+      });
     };
 
     updateNavbar();
@@ -55,7 +70,11 @@ function Navbar() {
           Products
         </button>
 
-        <button style={styles.navButton} onClick={() => navigate("/cart")}>
+        <button
+          className={isCartBouncing ? "cart-bounce" : ""}
+          style={styles.navButton}
+          onClick={() => navigate("/cart")}
+        >
           🛒 Cart {cartCount > 0 && <span style={styles.badge}>{cartCount}</span>}
         </button>
 

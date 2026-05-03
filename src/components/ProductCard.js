@@ -5,7 +5,7 @@ import { isLoggedIn, authFetch } from "../services/auth";
 
 const WISHLIST_API = "http://localhost:8080/api/wishlist";
 
-function ProductCard({ product, onAddToCart }) {
+function ProductCard({ product, onAddToCart, isAdded }) {
   const [wishlisted, setWishlisted] = useState(false);
   const navigate = useNavigate();
 
@@ -100,12 +100,13 @@ function ProductCard({ product, onAddToCart }) {
       <button
         style={{
           ...styles.button,
+          ...(isAdded ? styles.addedButton : {}),
           ...(product.inStock ? {} : styles.disabledButton),
         }}
         disabled={!product.inStock}
         onClick={handleAddToCart}
       >
-        {product.inStock ? "Add to Cart" : "Out of Stock"}
+        {!product.inStock ? "Out of Stock" : isAdded ? "Added ✓" : "Add to Cart"}
       </button>
 
       <button
@@ -205,6 +206,10 @@ const styles = {
     color: "white",
     fontSize: "16px",
     cursor: "pointer",
+  },
+  addedButton: {
+    backgroundColor: "#15803d",
+    transform: "scale(1.03)",
   },
   disabledButton: {
     backgroundColor: "#9ca3af",

@@ -11,6 +11,7 @@ function ProductList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("default");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [addedProductId, setAddedProductId] = useState(null);
 
 
   useEffect(() => {
@@ -64,7 +65,12 @@ function ProductList() {
   const handleAddToCart = (product) => {
     if (!product.inStock) return;
 
-    const updatedCart = addToCart(product);
+    addToCart(product);
+    setAddedProductId(product.id);
+
+    setTimeout(() => {
+      setAddedProductId(null);
+    }, 1200);
   };
 
   return (
@@ -125,6 +131,7 @@ function ProductList() {
                 key={product.id}
                 product={product}
                 onAddToCart={handleAddToCart}
+                isAdded={addedProductId === product.id}
               />
             ))
           ) : (
