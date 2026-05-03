@@ -12,6 +12,7 @@ export function getCart() {
 
 export function saveCart(cartItems) {
   localStorage.setItem(CART_KEY, JSON.stringify(cartItems));
+  window.dispatchEvent(new Event("cartUpdated"));
 }
 
 export function addToCart(product) {
@@ -59,6 +60,7 @@ export function removeFromCart(productId) {
 
 export function clearCart() {
   localStorage.removeItem(CART_KEY);
+  window.dispatchEvent(new Event("cartUpdated"));
 }
 
 export function getCartTotal(cartItems) {

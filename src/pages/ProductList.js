@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { addToCart, getCart } from "../services/cart";
 import ProductCard from "../components/ProductCard";
 import getProducts from "../services/products";
@@ -12,11 +11,8 @@ function ProductList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("default");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [addedProductId, setAddedProductId] = useState(null);
 
-  const navigate = useNavigate();
-  const [cartCount, setCartCount] = useState(
-    getCart().reduce((sum, item) => sum + item.quantity, 0)
-  );
 
   useEffect(() => {
     getProducts()
@@ -69,9 +65,12 @@ function ProductList() {
   const handleAddToCart = (product) => {
     if (!product.inStock) return;
 
-    const updatedCart = addToCart(product);
-    const totalItems = updatedCart.reduce((sum, item) => sum + item.quantity, 0);
-    setCartCount(totalItems);
+    addToCart(product);
+    setAddedProductId(product.id);
+
+    setTimeout(() => {
+      setAddedProductId(null);
+    }, 1200);
   };
 
   return (
@@ -84,9 +83,7 @@ function ProductList() {
           </p>
         </div>
 
-        <button style={styles.cartButton} onClick={() => navigate("/cart")}>
-          Cart ({cartCount})
-        </button>
+
       </div>
 
       <div style={styles.topBar}>
@@ -134,6 +131,7 @@ function ProductList() {
                 key={product.id}
                 product={product}
                 onAddToCart={handleAddToCart}
+                isAdded={addedProductId === product.id}
               />
             ))
           ) : (
@@ -159,15 +157,6 @@ const styles = {
     alignItems: "flex-start",
     gap: "16px",
     flexWrap: "wrap",
-  },
-  cartButton: {
-    backgroundColor: "#6b4f3b",
-    color: "white",
-    border: "none",
-    borderRadius: "10px",
-    padding: "12px 16px",
-    fontSize: "16px",
-    cursor: "pointer",
   },
   title: {
     textAlign: "center",
