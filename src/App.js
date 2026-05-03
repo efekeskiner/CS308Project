@@ -15,6 +15,49 @@ import { getCart } from "./services/cart";
 import { useState, useEffect } from "react";
 import "./App.css";
 
+const isManagerUser = (user) =>
+  user?.role === "PRODUCT_MANAGER" || user?.role === "SALES_MANAGER";
+
+const isCustomerUser = (user) => user?.role === "CUSTOMER";
+
+function CustomerOnlyRoute({ children }) {
+  const user = isLoggedIn() ? getCurrentUser() : null;
+
+  if (isManagerUser(user)) {
+    return <Navigate to="/admin" />;
+  }
+
+  return children;
+}
+
+function CustomerPrivateRoute({ children }) {
+  const user = isLoggedIn() ? getCurrentUser() : null;
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  if (!isCustomerUser(user)) {
+    return <Navigate to="/admin" />;
+  }
+
+  return children;
+}
+
+function ManagerRoute({ children }) {
+  const user = isLoggedIn() ? getCurrentUser() : null;
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  if (!isManagerUser(user)) {
+    return <Navigate to="/products" />;
+  }
+
+  return children;
+}
+
 function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,6 +102,9 @@ function Navbar() {
   const noNavRoutes = ["/login", "/register"];
   if (noNavRoutes.includes(location.pathname)) return null;
 
+  const isCustomer = !user || isCustomerUser(user);
+  const isManager = isManagerUser(user);
+
   return (
     <nav style={styles.navbar}>
       <span style={styles.brand} onClick={() => navigate("/products")}>
@@ -70,29 +116,35 @@ function Navbar() {
           Products
         </button>
 
-        <button
-          className={isCartBouncing ? "cart-bounce" : ""}
-          style={styles.navButton}
-          onClick={() => navigate("/cart")}
-        >
-          🛒 Cart {cartCount > 0 && <span style={styles.badge}>{cartCount}</span>}
-        </button>
+        {isCustomer && (
+          <button
+            className={isCartBouncing ? "cart-bounce" : ""}
+            style={styles.navButton}
+            onClick={() => navigate("/cart")}
+          >
+            🛒 Cart {cartCount > 0 && <span style={styles.badge}>{cartCount}</span>}
+          </button>
+        )}
 
         {user ? (
           <>
-            <button style={styles.navButton} onClick={() => navigate("/orders")}>
-              My Orders
-            </button>
+            {isCustomerUser(user) && (
+              <>
+                <button style={styles.navButton} onClick={() => navigate("/orders")}>
+                  My Orders
+                </button>
 
-            <button style={styles.navButton} onClick={() => navigate("/wishlist")}>
-              Wishlist
-            </button>
+                <button style={styles.navButton} onClick={() => navigate("/wishlist")}>
+                  Wishlist
+                </button>
+              </>
+            )}
 
             <button style={styles.navButton} onClick={() => navigate("/profile")}>
               👤 {user.name?.split(" ")[0] || "Profile"}
             </button>
 
-            {(user.role === "SALES_MANAGER" || user.role === "PRODUCT_MANAGER") && (
+            {isManager && (
               <button style={styles.navButton} onClick={() => navigate("/admin")}>
                 Admin
               </button>
@@ -134,34 +186,57 @@ function App() {
         <Route path="/products" element={<ProductList />} />
         <Route path="/products/:id" element={<ProductDetailPage />} />
 
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/wishlist" element={<WishlistPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route
+          path="/cart"
+          element={
+            <CustomerOnlyRoute>
+              <CartPage />
+            </CustomerOnlyRoute>
+          }
+        />
+
+        <Route
+          path="/wishlist"
+          element={
+            <CustomerOnlyRoute>
+              <WishlistPage />
+            </CustomerOnlyRoute>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <ProfilePage />
+            </PrivateRoute>
+          }
+        />
 
         <Route
           path="/orders"
           element={
-            <PrivateRoute>
+            <CustomerPrivateRoute>
               <OrdersPage />
-            </PrivateRoute>
+            </CustomerPrivateRoute>
           }
         />
 
         <Route
           path="/admin"
           element={
-            <PrivateRoute>
+            <ManagerRoute>
               <AdminPage />
-            </PrivateRoute>
+            </ManagerRoute>
           }
         />
 
         <Route
           path="/checkout"
           element={
-            <PrivateRoute>
+            <CustomerPrivateRoute>
               <CheckoutPage />
-            </PrivateRoute>
+            </CustomerPrivateRoute>
           }
         />
       </Routes>

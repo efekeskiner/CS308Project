@@ -5,6 +5,7 @@ import { getProductById } from "../services/products";
 import { getApprovedComments, submitComment } from "../services/comments";
 import { getProductRating, submitRating } from "../services/ratings";
 import { getMyOrders } from "../services/orders";
+import { getCurrentUser } from "../services/auth";
 import "./ProductDetailPage.css";
 
 const FALLBACK_IMAGE =
@@ -28,11 +29,14 @@ function ProductDetailPage() {
 
   const token = localStorage.getItem("accessToken");
   const isLoggedIn = !!token;
+  const currentUser = getCurrentUser();
+  const isCustomer = !currentUser || currentUser.role === "CUSTOMER";
 
   const orderList = Array.isArray(orders) ? orders : orders.content || [];
 
   const canReview =
     isLoggedIn &&
+    isCustomer &&
     orderList.some((order) => {
       const status = String(order.status || "").toUpperCase();
       const items = order.items || [];
@@ -68,7 +72,7 @@ function ProductDetailPage() {
           setRatingInfo(null);
         }
 
-        if (isLoggedIn) {
+        if (isLoggedIn && isCustomer) {
           try {
             const orderData = await getMyOrders();
             setOrders(orderData);
@@ -86,7 +90,7 @@ function ProductDetailPage() {
     }
 
     loadProductDetail();
-  }, [id, isLoggedIn]);
+  }, [id, isLoggedIn, isCustomer]);
 
   const handleAddToCart = () => {
     if (!product || !product.inStock) return;
@@ -196,13 +200,15 @@ function ProductDetailPage() {
             </p>
           </div>
 
-          <button
-            className={inStock ? "add-to-cart-button" : "add-to-cart-button disabled"}
-            disabled={!inStock}
-            onClick={handleAddToCart}
-          >
-            {inStock ? "Add to Cart" : "Out of Stock"}
-          </button>
+          {isCustomer && (
+            <button
+              className={inStock ? "add-to-cart-button" : "add-to-cart-button disabled"}
+              disabled={!inStock}
+              onClick={handleAddToCart}
+            >
+              {inStock ? "Add to Cart" : "Out of Stock"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -233,7 +239,13 @@ function ProductDetailPage() {
           </p>
         )}
 
-        {isLoggedIn && !canReview && (
+        {isLoggedIn && !isCustomer && (
+          <p className="muted-text">
+            Manager accounts cannot rate, comment, or purchase products.
+          </p>
+        )}
+
+        {isLoggedIn && isCustomer && !canReview && (
           <p className="muted-text">
             You can review this product only after purchasing it and receiving delivery.
           </p>

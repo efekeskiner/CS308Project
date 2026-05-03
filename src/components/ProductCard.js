@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { isInWishlist, toggleWishlist } from "../services/wishlist";
-import { isLoggedIn, authFetch } from "../services/auth";
+import { isLoggedIn, authFetch, getCurrentUser } from "../services/auth";
 
 const WISHLIST_API = "http://localhost:8080/api/wishlist";
 
@@ -12,11 +12,19 @@ function ProductCard({ product, onAddToCart, isAdded }) {
   const [wishlisted, setWishlisted] = useState(false);
   const navigate = useNavigate();
 
+  const currentUser = getCurrentUser();
+  const isCustomer = !currentUser || currentUser.role === "CUSTOMER";
+
   useEffect(() => {
     let cancelled = false;
 
     const loadWishlistStatus = async () => {
       if (!product) return;
+
+      if (!isCustomer) {
+        setWishlisted(false);
+        return;
+      }
 
       if (!isLoggedIn()) {
         setWishlisted(isInWishlist(product.id));
@@ -64,7 +72,7 @@ function ProductCard({ product, onAddToCart, isAdded }) {
     return () => {
       cancelled = true;
     };
-  }, [product?.id]);
+  }, [product?.id, isCustomer]);
 
   const handleCardClick = () => {
     navigate(`/products/${product.id}`);
@@ -163,27 +171,31 @@ function ProductCard({ product, onAddToCart, isAdded }) {
         Stock: {product.inStock ? product.quantityInStock ?? 0 : "Out of stock"}
       </p>
 
-      <button
-        style={{
-          ...styles.button,
-          ...(isAdded ? styles.addedButton : {}),
-          ...(product.inStock ? {} : styles.disabledButton),
-        }}
-        disabled={!product.inStock}
-        onClick={handleAddToCart}
-      >
-        {!product.inStock ? "Out of Stock" : isAdded ? "Added ✓" : "Add to Cart"}
-      </button>
+      {isCustomer && (
+        <>
+          <button
+            style={{
+              ...styles.button,
+              ...(isAdded ? styles.addedButton : {}),
+              ...(product.inStock ? {} : styles.disabledButton),
+            }}
+            disabled={!product.inStock}
+            onClick={handleAddToCart}
+          >
+            {!product.inStock ? "Out of Stock" : isAdded ? "Added ✓" : "Add to Cart"}
+          </button>
 
-      <button
-        style={{
-          ...styles.wishlistButton,
-          ...(wishlisted ? styles.wishlisted : {}),
-        }}
-        onClick={handleWishlistToggle}
-      >
-        {wishlisted ? "♥ Remove from Wishlist" : "♡ Add to Wishlist"}
-      </button>
+          <button
+            style={{
+              ...styles.wishlistButton,
+              ...(wishlisted ? styles.wishlisted : {}),
+            }}
+            onClick={handleWishlistToggle}
+          >
+            {wishlisted ? "♥ Remove from Wishlist" : "♡ Add to Wishlist"}
+          </button>
+        </>
+      )}
     </div>
   );
 }
