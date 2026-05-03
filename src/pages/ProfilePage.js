@@ -25,6 +25,9 @@ function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const isManager =
+    user?.role === "PRODUCT_MANAGER" || user?.role === "SALES_MANAGER";
+
   useEffect(() => {
     if (!loggedIn) return;
 
@@ -160,7 +163,7 @@ function ProfilePage() {
           )}
         </div>
 
-        {loggedIn && (
+        {loggedIn && !isManager && (
           <div style={styles.card}>
             <h3 style={{ ...styles.cardTitle, marginBottom: "12px" }}>
               Order History
@@ -175,40 +178,54 @@ function ProfilePage() {
           </h3>
 
           <div style={styles.actions}>
-            {!loggedIn && (
+            {isManager ? (
               <button
                 style={styles.actionButton}
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/admin")}
               >
-                Go to Login
+                Go to Admin Panel
               </button>
-            )}
+            ) : (
+              <>
+                {!loggedIn && (
+                  <button
+                    style={styles.actionButton}
+                    onClick={() => navigate("/login")}
+                  >
+                    Go to Login
+                  </button>
+                )}
 
-            <button
-              style={styles.actionButton}
-              onClick={() => navigate(loggedIn ? "/wishlist" : "/login")}
-            >
-              Go to Wishlist
-            </button>
+                <button
+                  style={styles.actionButton}
+                  onClick={() => navigate(loggedIn ? "/wishlist" : "/login")}
+                >
+                  Go to Wishlist
+                </button>
 
-            <button style={styles.actionButton} onClick={() => navigate("/cart")}>
-              Go to Cart
-            </button>
+                <button
+                  style={styles.actionButton}
+                  onClick={() => navigate("/cart")}
+                >
+                  Go to Cart
+                </button>
 
-            <button
-              style={styles.actionButton}
-              onClick={() => navigate("/products")}
-            >
-              Continue Shopping
-            </button>
+                <button
+                  style={styles.actionButton}
+                  onClick={() => navigate("/products")}
+                >
+                  Continue Shopping
+                </button>
 
-            {loggedIn && (
-              <button
-                style={styles.actionButton}
-                onClick={() => navigate("/orders")}
-              >
-                My Orders
-              </button>
+                {loggedIn && (
+                  <button
+                    style={styles.actionButton}
+                    onClick={() => navigate("/orders")}
+                  >
+                    My Orders
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
