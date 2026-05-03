@@ -5,6 +5,9 @@ import { isLoggedIn, authFetch } from "../services/auth";
 
 const WISHLIST_API = "http://localhost:8080/api/wishlist";
 
+const FALLBACK_IMAGE =
+  "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='420' viewBox='0 0 300 420'%3E%3Crect width='300' height='420' fill='%23f3ece3'/%3E%3Crect x='45' y='55' width='210' height='310' rx='16' fill='%23ffffff' stroke='%23d1c7bc' stroke-width='3'/%3E%3Ctext x='150' y='195' text-anchor='middle' font-family='Arial' font-size='24' fill='%236b4f3b'%3ENo Image%3C/text%3E%3Ctext x='150' y='230' text-anchor='middle' font-family='Arial' font-size='16' fill='%238b7b72'%3EBook Cover%3C/text%3E%3C/svg%3E";
+
 function ProductCard({ product, onAddToCart, isAdded }) {
   const [wishlisted, setWishlisted] = useState(false);
   const navigate = useNavigate();
@@ -50,13 +53,17 @@ function ProductCard({ product, onAddToCart, isAdded }) {
   if (!product) return null;
 
   const hasDiscount = Number(product.discountRate) > 0;
+  const imageSrc = product.imageUrl || FALLBACK_IMAGE;
 
   return (
     <div style={styles.card} onClick={handleCardClick}>
       <img
-        src={product.imageUrl || "https://via.placeholder.com/150?text=No+Image"}
+        src={imageSrc}
         alt={product.name || "Book"}
         style={styles.image}
+        onError={(event) => {
+          event.currentTarget.src = FALLBACK_IMAGE;
+        }}
       />
 
       <h3 style={styles.name}>{product.name || "No Name"}</h3>

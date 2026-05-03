@@ -7,6 +7,9 @@ import { getProductRating, submitRating } from "../services/ratings";
 import { getMyOrders } from "../services/orders";
 import "./ProductDetailPage.css";
 
+const FALLBACK_IMAGE =
+  "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='420' viewBox='0 0 300 420'%3E%3Crect width='300' height='420' fill='%23f3ece3'/%3E%3Crect x='45' y='55' width='210' height='310' rx='16' fill='%23ffffff' stroke='%23d1c7bc' stroke-width='3'/%3E%3Ctext x='150' y='195' text-anchor='middle' font-family='Arial' font-size='24' fill='%236b4f3b'%3ENo Image%3C/text%3E%3Ctext x='150' y='230' text-anchor='middle' font-family='Arial' font-size='16' fill='%238b7b72'%3EBook Cover%3C/text%3E%3C/svg%3E";
+
 function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -141,6 +144,7 @@ function ProductDetailPage() {
   const averageRating =
     ratingInfo?.averageRating ?? product.averageRating ?? "No rating yet";
   const ratingCount = ratingInfo?.ratingCount ?? product.ratingCount;
+  const imageSrc = product.imageUrl || FALLBACK_IMAGE;
 
   return (
     <div className="product-detail-page">
@@ -151,9 +155,12 @@ function ProductDetailPage() {
       <div className="product-detail-card">
         <div className="product-image-section">
           <img
-            src={product.imageUrl || "https://via.placeholder.com/300?text=No+Image"}
+            src={imageSrc}
             alt={product.name || "Product"}
             className="product-detail-image"
+            onError={(event) => {
+              event.currentTarget.src = FALLBACK_IMAGE;
+            }}
           />
         </div>
 
@@ -166,7 +173,7 @@ function ProductDetailPage() {
           </p>
 
           <div className="price-section">
-            {product.discountRate > 0 && (
+            {Number(product.discountRate) > 0 && (
               <span className="original-price">
                 {product.originalPrice} TL
               </span>
@@ -239,20 +246,20 @@ function ProductDetailPage() {
             <div className="rating-widget">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
                 <button
-                    key={score}
-                    type="button"
-                    className={selectedRating === score ? "score-button selected" : "score-button"}
-                    onClick={() => setSelectedRating(score)}
+                  key={score}
+                  type="button"
+                  className={selectedRating === score ? "score-button selected" : "score-button"}
+                  onClick={() => setSelectedRating(score)}
                 >
-                    {score}
+                  {score}
                 </button>
-             ))}
+              ))}
             </div>
 
             {selectedRating > 0 && (
-                <p className="selected-rating-text">
-                    Selected rating: {selectedRating}/10
-                </p>
+              <p className="selected-rating-text">
+                Selected rating: {selectedRating}/10
+              </p>
             )}
 
             <label>Comment</label>
