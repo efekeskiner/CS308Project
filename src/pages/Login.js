@@ -67,7 +67,7 @@ const styles = {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: "#f5f5f5",
+          backgroundColor: "#a2755e0b",
     },
     box: {
           backgroundColor: "white",
@@ -93,7 +93,7 @@ const styles = {
     button: {
           padding: "10px",
           fontSize: "16px",
-          backgroundColor: "#007bff",
+          backgroundColor: "#4b2e2e",
           color: "white",
           border: "none",
           borderRadius: "5px",
