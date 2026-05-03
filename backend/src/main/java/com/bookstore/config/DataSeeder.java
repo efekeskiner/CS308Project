@@ -129,35 +129,38 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedProductManager() {
         String email = "pm@bookstore.local";
-        if (userRepository.findByEmail(email).isPresent()) return;
 
-        User pm = new User();
-        pm.setName("Product Manager");
-        pm.setEmail(email);
-        pm.setPasswordHash(new BCryptPasswordEncoder().encode("pm12345"));
-        pm.setRole(Role.PRODUCT_MANAGER);
-        userRepository.save(pm);
+        if (!userRepository.findByEmail(email).isPresent()) {
+                User pm = new User();
+                pm.setName("Product Manager");
+                pm.setEmail(email);
+                pm.setPasswordHash(new BCryptPasswordEncoder().encode("pm12345"));
+                pm.setRole(Role.PRODUCT_MANAGER);
+                userRepository.save(pm);
+        }
 
         String smEmail = "sm@bookstore.local";
+
         if (!userRepository.findByEmail(smEmail).isPresent()) {
-            User sm = new User();
-            sm.setName("Sales Manager");
-            sm.setEmail(smEmail);
-            sm.setPasswordHash(new BCryptPasswordEncoder().encode("sm12345"));
-            sm.setRole(Role.SALES_MANAGER);
-            userRepository.save(sm);
+                User sm = new User();
+                sm.setName("Sales Manager");
+                sm.setEmail(smEmail);
+                sm.setPasswordHash(new BCryptPasswordEncoder().encode("sm12345"));
+                sm.setRole(Role.SALES_MANAGER);
+                userRepository.save(sm);
         }
 
         String custEmail = "customer@bookstore.local";
+
         if (!userRepository.findByEmail(custEmail).isPresent()) {
-            User cust = new User();
-            cust.setName("Demo Customer");
-            cust.setEmail(custEmail);
-            cust.setPasswordHash(new BCryptPasswordEncoder().encode("cust12345"));
-            cust.setTaxId("12345678901");
-            cust.setHomeAddress("Sabancı University, Tuzla, Istanbul");
-            cust.setRole(Role.CUSTOMER);
-            userRepository.save(cust);
+                User cust = new User();
+                cust.setName("Demo Customer");
+                cust.setEmail(custEmail);
+                cust.setPasswordHash(new BCryptPasswordEncoder().encode("cust12345"));
+                cust.setTaxId("12345678901");
+                cust.setHomeAddress("Sabancı University, Tuzla, Istanbul");
+                cust.setRole(Role.CUSTOMER);
+                userRepository.save(cust);
         }
     }
 
