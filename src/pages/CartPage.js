@@ -107,7 +107,7 @@ function CartPage() {
 
                     <div className="cart-item-middle">
                       <h3>{item.name}</h3>
-                      <p className="price">Unit Price: ${Number(item.price).toFixed(2)}</p>
+                      <p className="price">Unit Price: ₺{Number(item.price).toFixed(2)}</p>
                       <p className={item.inStock ? "stock in-stock" : "stock out-of-stock"}>
                         {item.inStock ? "In Stock" : "Out of Stock"}
                       </p>
@@ -121,7 +121,7 @@ function CartPage() {
 
                     <div className="cart-item-right">
                       <p className="subtotal-label">Subtotal</p>
-                      <p className="subtotal-value">${subtotal.toFixed(2)}</p>
+                      <p className="subtotal-value">₺{subtotal.toFixed(2)}</p>
                       <button
                         className="remove-btn"
                         onClick={() => handleRemove(item.id)}
@@ -144,7 +144,7 @@ function CartPage() {
 
               <div className="summary-row">
                 <span>Total</span>
-                <span>${totalPrice.toFixed(2)}</span>
+                <span>₺{totalPrice.toFixed(2)}</span>
               </div>
 
               <button className="primary-btn" onClick={handleProceedToCheckout}>
