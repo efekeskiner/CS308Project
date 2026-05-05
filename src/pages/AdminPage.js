@@ -77,9 +77,13 @@ function CommentsPanel() {
         <div key={c.id} style={styles.card}>
           <div style={styles.cardHeader}>
             <strong>{c.userName}</strong>
-            <span style={{ fontSize: 12, color: "#888" }}>Product #{c.productId}</span>
+            <span style={{ fontSize: 12, color: "#888" }}>{c.productName || `Product #${c.productId}`}</span>
           </div>
-          <p style={{ margin: "8px 0", color: "#333" }}>{c.content}</p>
+          <div style={{ margin: "6px 0 2px", fontSize: 13, color: "#6b4f3b", fontWeight: 600 }}>
+            {"★".repeat(Math.round((c.score || 0) / 2))}{"☆".repeat(5 - Math.round((c.score || 0) / 2))}
+            {" "}{c.score}/10
+          </div>
+          <p style={{ margin: "4px 0 8px", color: "#333" }}>{c.content}</p>
           <div style={{ display: "flex", gap: 8 }}>
             <button style={styles.approveBtn} onClick={() => action(c.id, true)}>✓ Approve</button>
             <button style={styles.rejectBtn} onClick={() => action(c.id, false)}>✗ Reject</button>

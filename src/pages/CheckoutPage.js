@@ -4,6 +4,7 @@ import "./CheckoutPage.css";
 import { getCart, clearCart, getCartTotal } from "../services/cart";
 import { getCurrentUser } from "../services/auth";
 import { placeOrder } from "../services/orders";
+import { getInvoicePdfUrl } from "../services/invoices";
 
 function CheckoutPage() {
   const navigate = useNavigate();
@@ -56,21 +57,69 @@ function CheckoutPage() {
   };
 
   if (orderPlaced && placedOrder) {
+    const invoiceItems = Array.isArray(placedOrder.items) ? placedOrder.items : [];
+
     return (
       <div className="checkout-page">
         <div className="checkout-container success-card">
           <p className="checkout-brand">Online Bookstore</p>
-          <h1>Order Placed Successfully! 🎉</h1>
+          <h1>Order Placed Successfully!</h1>
           <p className="checkout-subtitle">
-            Your order is being processed. You will receive an invoice by email.
+            Your order is being processed. A copy of this invoice has been emailed to you.
           </p>
 
           <div className="invoice-box">
-            <p><strong>Customer:</strong> {currentUser?.name || "Customer"}</p>
-            <p><strong>Order ID:</strong> #{placedOrder.id}</p>
-            <p><strong>Invoice ID:</strong> {placedOrder.invoiceId || "Generating..."}</p>
-            <p><strong>Total Paid:</strong> ₺{Number(placedOrder.totalPrice).toFixed(2)}</p>
-            <p><strong>Status:</strong> {placedOrder.status || "PROCESSING"}</p>
+            <div className="invoice-header-row">
+              <div>
+                <p><strong>Customer:</strong> {currentUser?.name || "Customer"}</p>
+                <p><strong>Order ID:</strong> #{placedOrder.id}</p>
+                <p><strong>Invoice ID:</strong> #{placedOrder.invoiceId || "—"}</p>
+                <p><strong>Status:</strong> {placedOrder.status || "PROCESSING"}</p>
+              </div>
+              {placedOrder.invoiceId && (
+                <a
+                  href={getInvoicePdfUrl(placedOrder.invoiceId)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="pdf-download-btn"
+                >
+                  Download Invoice PDF
+                </a>
+              )}
+            </div>
+
+            {invoiceItems.length > 0 && (
+              <table className="invoice-items-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
+                    <th>Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoiceItems.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.productName}</td>
+                      <td>{item.quantity}</td>
+                      <td>₺{Number(item.unitPrice).toFixed(2)}</td>
+                      <td>₺{(Number(item.unitPrice) * Number(item.quantity)).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={3}><strong>Total</strong></td>
+                    <td><strong>₺{Number(placedOrder.totalPrice).toFixed(2)}</strong></td>
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+
+            {invoiceItems.length === 0 && (
+              <p><strong>Total Paid:</strong> ₺{Number(placedOrder.totalPrice).toFixed(2)}</p>
+            )}
           </div>
 
           <div className="success-actions">
