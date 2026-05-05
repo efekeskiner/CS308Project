@@ -4,8 +4,8 @@ import { addToCart } from "../services/cart";
 import { getProductById } from "../services/products";
 import { getApprovedComments, submitComment } from "../services/comments";
 import { getProductRating, submitRating } from "../services/ratings";
-import { getMyOrders } from "../services/orders";
 import { getCurrentUser } from "../services/auth";
+import { getMyOrders } from "../services/orders";
 import "./ProductDetailPage.css";
 
 const FALLBACK_IMAGE =
@@ -224,6 +224,12 @@ function ProductDetailPage() {
                 <strong>{comment.userName || "Customer"}</strong>
                 {comment.createdAt && <span>{new Date(comment.createdAt).toLocaleDateString()}</span>}
               </div>
+              {comment.score != null && (
+                <div className="comment-rating">
+                  {"★".repeat(Math.round(comment.score / 2))}{"☆".repeat(5 - Math.round(comment.score / 2))}
+                  <span className="comment-rating-number">{comment.score}/10</span>
+                </div>
+              )}
               <p>{comment.content}</p>
             </div>
           ))

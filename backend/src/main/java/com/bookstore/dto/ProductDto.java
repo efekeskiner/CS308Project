@@ -20,10 +20,14 @@ public class ProductDto {
     private final Long categoryId;
     private final String categoryName;
     private final Double averageRating;
-    private final Integer ratingCount;
+    private final Long ratingCount;
     private final boolean inStock;
 
     public ProductDto(Product p) {
+        this(p, null, 0L);
+    }
+
+    public ProductDto(Product p, Double averageRating, Long ratingCount) {
         this.id = p.getId();
         this.name = p.getName();
         this.model = p.getModel();
@@ -38,9 +42,8 @@ public class ProductDto {
         this.imageUrl = p.getImageUrl();
         this.categoryId = p.getCategory() != null ? p.getCategory().getId() : null;
         this.categoryName = p.getCategory() != null ? p.getCategory().getName() : null;
-        // averageRating/ratingCount are wired once the ratings feature lands
-        this.averageRating = null;
-        this.ratingCount = 0;
+        this.averageRating = averageRating;
+        this.ratingCount = ratingCount != null ? ratingCount : 0L;
         this.inStock = p.getQuantityInStock() != null && p.getQuantityInStock() > 0;
     }
 
@@ -59,6 +62,6 @@ public class ProductDto {
     public Long getCategoryId() { return categoryId; }
     public String getCategoryName() { return categoryName; }
     public Double getAverageRating() { return averageRating; }
-    public Integer getRatingCount() { return ratingCount; }
+    public Long getRatingCount() { return ratingCount; }
     public boolean isInStock() { return inStock; }
 }

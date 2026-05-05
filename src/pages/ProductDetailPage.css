@@ -107,6 +107,19 @@
   border-bottom: none;
 }
 
+.comment-rating {
+  font-size: 15px;
+  color: #c8860a;
+  margin: 4px 0 6px;
+}
+
+.comment-rating-number {
+  font-size: 13px;
+  color: #6b4f3b;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
 .comment-header {
   display: flex;
   justify-content: space-between;

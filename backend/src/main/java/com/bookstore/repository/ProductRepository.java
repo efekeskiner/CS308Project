@@ -26,4 +26,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                          Pageable pageable);
 
     boolean existsBySerialNumber(String serialNumber);
+
+    @Query("SELECT p FROM Product p WHERE " +
+           "(:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "             OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "AND (:categoryId IS NULL OR p.category.id = :categoryId)")
+    java.util.List<Product> searchAll(@Param("search") String search,
+                                      @Param("categoryId") Long categoryId);
 }

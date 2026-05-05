@@ -6,6 +6,7 @@ import com.bookstore.model.Category;
 import com.bookstore.model.Product;
 import com.bookstore.repository.CategoryRepository;
 import com.bookstore.repository.ProductRepository;
+import com.bookstore.repository.ReviewRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,11 +22,14 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final ReviewRepository reviewRepository;
 
     public ProductService(ProductRepository productRepository,
-                          CategoryRepository categoryRepository) {
+                          CategoryRepository categoryRepository,
+                          ReviewRepository reviewRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.reviewRepository = reviewRepository;
     }
 
     public Page<ProductDto> listProducts(String search, Long categoryId,
@@ -35,13 +39,18 @@ public class ProductService {
         if (size <= 0 || size > 100) size = 20;
         Pageable pageable = PageRequest.of(page, size, buildSort(sortBy, sortDir));
         String q = (search != null && !search.isBlank()) ? search.trim() : null;
-        return productRepository.search(q, categoryId, pageable).map(ProductDto::new);
+        return productRepository.search(q, categoryId, pageable)
+                .map(p -> new ProductDto(p,
+                        reviewRepository.findAverageScoreByProductId(p.getId()),
+                        reviewRepository.findCountByProductId(p.getId())));
     }
 
     public ProductDto getById(Long id) {
         Product p = productRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Product " + id + " not found"));
-        return new ProductDto(p);
+        return new ProductDto(p,
+                reviewRepository.findAverageScoreByProductId(id),
+                reviewRepository.findCountByProductId(id));
     }
 
     @Transactional
@@ -120,15 +129,9 @@ public class ProductService {
             return Sort.by(Sort.Direction.DESC, "createdAt");
         }
         switch (sortBy.toLowerCase()) {
-            case "price":
-                return Sort.by(dir, "price");
-            case "name":
-                return Sort.by(dir, "name");
-            case "popularity":
-                // TODO: switch to rating/order-count aggregate once ratings are persisted
-                return Sort.by(Sort.Direction.DESC, "createdAt");
-            default:
-                return Sort.by(Sort.Direction.DESC, "createdAt");
+            case "price": return Sort.by(dir, "price");
+            case "name":  return Sort.by(dir, "name");
+            default:      return Sort.by(Sort.Direction.DESC, "createdAt");
         }
     }
 }
