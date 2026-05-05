@@ -64,6 +64,7 @@ function Navbar() {
   const [user, setUser] = useState(null);
   const [cartCount, setCartCount] = useState(0);
   const [isCartBouncing, setIsCartBouncing] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   useEffect(() => {
     const updateNavbar = () => {
@@ -94,6 +95,7 @@ function Navbar() {
   }, [location]);
 
   const handleLogout = () => {
+    setProfileMenuOpen(false);
     logout();
     setUser(null);
     navigate("/login");
@@ -140,19 +142,47 @@ function Navbar() {
               </>
             )}
 
-            <button style={styles.navButton} onClick={() => navigate("/profile")}>
-              👤 {user.name?.split(" ")[0] || "Profile"}
-            </button>
-
-            {isManager && (
-              <button style={styles.navButton} onClick={() => navigate("/admin")}>
-                Admin
+            <div style={styles.profileMenuWrapper}>
+              <button
+                style={{ ...styles.navButton, ...styles.profileTrigger }}
+                onClick={() => setProfileMenuOpen((prev) => !prev)}
+              >
+                👤 {user.name?.split(" ")[0] || "Profile"} ▾
               </button>
-            )}
 
-            <button style={{ ...styles.navButton, ...styles.logoutBtn }} onClick={handleLogout}>
-              Logout
-            </button>
+              {profileMenuOpen && (
+                <div style={styles.dropdownMenu}>
+                  <button
+                    style={styles.dropdownItem}
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      navigate("/profile");
+                    }}
+                  >
+                    Profile
+                  </button>
+
+                  {isManager && (
+                    <button
+                      style={styles.dropdownItem}
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        navigate("/admin");
+                      }}
+                    >
+                      Admin
+                    </button>
+                  )}
+
+                  <button
+                    style={styles.dropdownItem}
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         ) : (
           <>
@@ -290,6 +320,34 @@ const styles = {
   logoutBtn: {
     borderColor: "#f87171",
     color: "#fca5a5",
+  },
+  profileMenuWrapper: {
+    position: "relative",
+  },
+  profileTrigger: {
+    minWidth: "170px",
+  },
+  dropdownMenu: {
+    position: "absolute",
+    top: "calc(100% + 8px)",
+    right: 0,
+    backgroundColor: "white",
+    border: "1px solid rgba(0,0,0,0.1)",
+    borderRadius: "12px",
+    boxShadow: "0 12px 24px rgba(0,0,0,0.12)",
+    overflow: "hidden",
+    zIndex: 20,
+    minWidth: "160px",
+  },
+  dropdownItem: {
+    width: "100%",
+    textAlign: "left",
+    backgroundColor: "transparent",
+    border: "none",
+    color: "#3f3f46",
+    padding: "12px 14px",
+    cursor: "pointer",
+    fontSize: "14px",
   },
   registerBtn: {
     backgroundColor: "#6b4f3b",
