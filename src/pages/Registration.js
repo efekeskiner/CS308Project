@@ -17,10 +17,26 @@ function Registration() {
   const [loading, setLoading]                         = useState(false);
   const navigate = useNavigate();
 
+  const isValidEmail = (value) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !taxId.trim() || !homeAddress.trim() || !password.trim() || !confirmPassword.trim()) {
       setFormError("Please fill in all fields.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setFormError("Please enter a valid email address.");
+      return;
+    }
+    if (!/^\d+$/.test(taxId)) {
+      setFormError("Tax ID must contain only numbers.");
+      return;
+    }
+    if (password.length < 6) {
+      setFormError("Password must be at least 6 characters long.");
       return;
     }
     if (password !== confirmPassword) {
