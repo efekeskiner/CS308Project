@@ -4,7 +4,7 @@ import "./CheckoutPage.css";
 import { getCart, clearCart, getCartTotal } from "../services/cart";
 import { getCurrentUser } from "../services/auth";
 import { placeOrder } from "../services/orders";
-import { getInvoicePdfUrl } from "../services/invoices";
+import { downloadInvoicePdf } from "../services/invoices";
 
 function CheckoutPage() {
   const navigate = useNavigate();
@@ -77,14 +77,12 @@ function CheckoutPage() {
                 <p><strong>Status:</strong> {placedOrder.status || "PROCESSING"}</p>
               </div>
               {placedOrder.invoiceId && (
-                <a
-                  href={getInvoicePdfUrl(placedOrder.invoiceId)}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
                   className="pdf-download-btn"
+                  onClick={() => downloadInvoicePdf(placedOrder.invoiceId, placedOrder.id)}
                 >
                   Download Invoice PDF
-                </a>
+                </button>
               )}
             </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch } from "../services/auth";
+import { downloadInvoicePdf } from "../services/invoices";
 
 const BASE_URL = "http://localhost:8080/api";
 
@@ -116,9 +117,9 @@ export default function OrdersPage() {
                   ))}
                   <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
                     {order.invoiceId && (
-                      <a href={`${BASE_URL}/invoices/${order.invoiceId}/pdf`} target="_blank" rel="noreferrer" style={styles.linkBtn}>
+                      <button style={styles.linkBtn} onClick={() => downloadInvoicePdf(order.invoiceId, order.id)}>
                         📄 Invoice PDF
-                      </a>
+                      </button>
                     )}
                     {order.status === "PROCESSING" && (
                       <button style={styles.cancelBtn} disabled={cancelling === order.id} onClick={() => handleCancel(order.id)}>
