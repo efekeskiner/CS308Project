@@ -1,5 +1,7 @@
 package com.bookstore.controller;
 
+import com.bookstore.dto.RefreshRequest;
+import com.bookstore.dto.TokenRefreshResponse;
 import com.bookstore.dto.UpdateProfileRequest;
 import com.bookstore.dto.LoginRequest;
 import com.bookstore.dto.LoginResponse;
@@ -11,6 +13,8 @@ import com.bookstore.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
 
 import java.util.Map;
 
@@ -37,13 +41,24 @@ import java.util.Map;
             }
 
     @PostMapping("/register")
-            public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+            public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
                         try {
                                         RegisterResponse response = authService.register(request);
                                         return ResponseEntity.status(201).body(response);
                         } catch (AuthService.EmailAlreadyExistsException e) {
                                         return ResponseEntity.status(409)
                                                                 .body(Map.of("message", "Email already in use"));
+                        }
+            }
+
+    @PostMapping("/refresh")
+            public ResponseEntity<?> refresh(@RequestBody RefreshRequest request) {
+                        try {
+                                        TokenRefreshResponse response = authService.refresh(request.getRefreshToken());
+                                        return ResponseEntity.ok(response);
+                        } catch (AuthService.TokenRefreshException e) {
+                                        return ResponseEntity.status(401)
+                                                                .body(Map.of("message", e.getMessage()));
                         }
             }
 

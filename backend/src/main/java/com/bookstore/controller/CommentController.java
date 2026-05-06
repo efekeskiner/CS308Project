@@ -50,7 +50,9 @@ public class CommentController {
     }
 
     @PutMapping("/api/comments/{id}/approve")
-    public ResponseEntity<?> approveComment(@PathVariable Long id) {
+    public ResponseEntity<?> approveComment(@PathVariable Long id,
+                                            @AuthenticationPrincipal User user) {
+        if (user == null) return ResponseEntity.status(401).build();
         try {
             reviewService.approveComment(id);
             return ResponseEntity.ok().build();
@@ -60,7 +62,9 @@ public class CommentController {
     }
 
     @PutMapping("/api/comments/{id}/reject")
-    public ResponseEntity<?> rejectComment(@PathVariable Long id) {
+    public ResponseEntity<?> rejectComment(@PathVariable Long id,
+                                           @AuthenticationPrincipal User user) {
+        if (user == null) return ResponseEntity.status(401).build();
         try {
             reviewService.rejectComment(id);
             return ResponseEntity.ok().build();

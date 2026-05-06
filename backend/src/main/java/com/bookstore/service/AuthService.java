@@ -3,8 +3,10 @@ package com.bookstore.service;
 import com.bookstore.dto.UpdateProfileRequest;
 import com.bookstore.dto.LoginRequest;
 import com.bookstore.dto.LoginResponse;
+import com.bookstore.dto.RefreshRequest;
 import com.bookstore.dto.RegisterRequest;
 import com.bookstore.dto.RegisterResponse;
+import com.bookstore.dto.TokenRefreshResponse;
 import com.bookstore.dto.UserDto;
 import com.bookstore.model.Role;
 import com.bookstore.model.User;
@@ -59,6 +61,18 @@ import org.springframework.stereotype.Service;
                 return new RegisterResponse("Registration successful", new UserDto(user));
     }
 
+    public TokenRefreshResponse refresh(String refreshToken) {
+                if (!jwtUtils.validateToken(refreshToken)) {
+                                throw new TokenRefreshException();
+                }
+                String email = jwtUtils.getEmailFromToken(refreshToken);
+                User user = userRepository.findByEmail(email)
+                                        .orElseThrow(TokenRefreshException::new);
+                String newAccessToken  = jwtUtils.generateAccessToken(user.getId(), user.getEmail(), user.getRole().name());
+                String newRefreshToken = jwtUtils.generateRefreshToken(user.getEmail());
+                return new TokenRefreshResponse(newAccessToken, newRefreshToken);
+    }
+
     public UserDto updateProfile(User currentUser, UpdateProfileRequest request) {
                 User user = userRepository.findById(currentUser.getId())
                                         .orElseThrow(InvalidCredentialsException::new);
@@ -79,6 +93,12 @@ import org.springframework.stereotype.Service;
     public static class EmailAlreadyExistsException extends RuntimeException {
                 public EmailAlreadyExistsException() {
                                 super("Email already in use");
+                }
+    }
+
+    public static class TokenRefreshException extends RuntimeException {
+                public TokenRefreshException() {
+                                super("Refresh token is invalid or expired");
                 }
     }
     }

@@ -12,6 +12,10 @@ spring:
     host: localhost
     port: 25
 
-jwt:
-  secret: test-secret-key-for-unit-tests-only-not-real
-  expiration: 86400000
+app:
+  jwt:
+    secret: test-secret-key-for-unit-tests-only-32chars-min
+    expiration-ms: 86400000
+    refresh-expiration-ms: 604800000
+  invoice:
+    storage-path: ./target/test-invoices
