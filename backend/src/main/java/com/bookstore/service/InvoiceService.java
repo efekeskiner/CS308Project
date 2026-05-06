@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -41,8 +42,10 @@ public class InvoiceService {
     @Transactional
     public Invoice createInvoice(Order order, User user) {
         File dir = new File(storagePath);
-        if (!dir.exists()) {
-            dir.mkdirs();
+        try {
+            Files.createDirectories(dir.toPath());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to create invoice storage directory: " + dir, e);
         }
 
         String fileName = "invoice-" + order.getId() + ".pdf";
@@ -124,68 +127,7 @@ public class InvoiceService {
             }
             doc.add(new Paragraph(" "));
 
-            // Items table
-            PdfPTable table = new PdfPTable(4);
-            table.setWidthPercentage(100);
-            table.setWidths(new float[]{4f, 1f, 2f, 2f});
-
-            Color headerBg = new Color(75, 46, 46);
-            Font headerFont = new Font(Font.HELVETICA, 10, Font.BOLD, Color.WHITE);
-            for (String col : new String[]{"Product", "Qty", "Unit Price", "Total"}) {
-                PdfPCell cell = new PdfPCell(new Phrase(col, headerFont));
-                cell.setBackgroundColor(headerBg);
-                cell.setPadding(6);
-                table.addCell(cell);
-            }
-
-            Color rowAlt = new Color(248, 244, 238);
-            int rowIndex = 0;
-            for (OrderItem item : order.getItems()) {
-                Color bg = (rowIndex++ % 2 == 0) ? Color.WHITE : rowAlt;
-                BigDecimal lineTotal = item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-
-                PdfPCell nameCell = new PdfPCell(new Phrase(item.getProduct().getName(), normalFont));
-                nameCell.setBackgroundColor(bg);
-                nameCell.setPadding(5);
-                table.addCell(nameCell);
-
-                PdfPCell qtyCell = new PdfPCell(new Phrase(String.valueOf(item.getQuantity()), normalFont));
-                qtyCell.setBackgroundColor(bg);
-                qtyCell.setPadding(5);
-                qtyCell.setHorizontalAlignment(Element.ALIGN_CENTER);
-                table.addCell(qtyCell);
-
-                PdfPCell priceCell = new PdfPCell(new Phrase("₺" + item.getUnitPrice().toPlainString(), normalFont));
-                priceCell.setBackgroundColor(bg);
-                priceCell.setPadding(5);
-                priceCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                table.addCell(priceCell);
-
-                PdfPCell totalCell = new PdfPCell(new Phrase("₺" + lineTotal.toPlainString(), normalFont));
-                totalCell.setBackgroundColor(bg);
-                totalCell.setPadding(5);
-                totalCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                table.addCell(totalCell);
-            }
-
-            // Total row
-            Font totalFont = new Font(Font.HELVETICA, 10, Font.BOLD, new Color(44, 44, 44));
-            PdfPCell emptyCell = new PdfPCell(new Phrase(""));
-            emptyCell.setBorder(Rectangle.NO_BORDER);
-            emptyCell.setColspan(2);
-            table.addCell(emptyCell);
-
-            PdfPCell totalLabel = new PdfPCell(new Phrase("TOTAL", totalFont));
-            totalLabel.setPadding(6);
-            totalLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            table.addCell(totalLabel);
-
-            PdfPCell totalValue = new PdfPCell(new Phrase("₺" + order.getTotalPrice().toPlainString(), totalFont));
-            totalValue.setPadding(6);
-            totalValue.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            table.addCell(totalValue);
-
-            doc.add(table);
+            doc.add(buildItemsTable(order, normalFont));
             doc.add(new Paragraph(" "));
 
             // Footer
@@ -198,5 +140,68 @@ public class InvoiceService {
         } finally {
             if (doc.isOpen()) doc.close();
         }
+    }
+
+    private PdfPTable buildItemsTable(Order order, Font normalFont) throws DocumentException {
+        PdfPTable table = new PdfPTable(4);
+        table.setWidthPercentage(100);
+        table.setWidths(new float[]{4f, 1f, 2f, 2f});
+
+        Color headerBg = new Color(75, 46, 46);
+        Font headerFont = new Font(Font.HELVETICA, 10, Font.BOLD, Color.WHITE);
+        for (String col : new String[]{"Product", "Qty", "Unit Price", "Total"}) {
+            PdfPCell cell = new PdfPCell(new Phrase(col, headerFont));
+            cell.setBackgroundColor(headerBg);
+            cell.setPadding(6);
+            table.addCell(cell);
+        }
+
+        Color rowAlt = new Color(248, 244, 238);
+        int rowIndex = 0;
+        for (OrderItem item : order.getItems()) {
+            Color bg = (rowIndex++ % 2 == 0) ? Color.WHITE : rowAlt;
+            BigDecimal lineTotal = item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+
+            PdfPCell nameCell = new PdfPCell(new Phrase(item.getProduct().getName(), normalFont));
+            nameCell.setBackgroundColor(bg);
+            nameCell.setPadding(5);
+            table.addCell(nameCell);
+
+            PdfPCell qtyCell = new PdfPCell(new Phrase(String.valueOf(item.getQuantity()), normalFont));
+            qtyCell.setBackgroundColor(bg);
+            qtyCell.setPadding(5);
+            qtyCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            table.addCell(qtyCell);
+
+            PdfPCell priceCell = new PdfPCell(new Phrase("₺" + item.getUnitPrice().toPlainString(), normalFont));
+            priceCell.setBackgroundColor(bg);
+            priceCell.setPadding(5);
+            priceCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            table.addCell(priceCell);
+
+            PdfPCell totalCell = new PdfPCell(new Phrase("₺" + lineTotal.toPlainString(), normalFont));
+            totalCell.setBackgroundColor(bg);
+            totalCell.setPadding(5);
+            totalCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            table.addCell(totalCell);
+        }
+
+        Font totalFont = new Font(Font.HELVETICA, 10, Font.BOLD, new Color(44, 44, 44));
+        PdfPCell emptyCell = new PdfPCell(new Phrase(""));
+        emptyCell.setBorder(Rectangle.NO_BORDER);
+        emptyCell.setColspan(2);
+        table.addCell(emptyCell);
+
+        PdfPCell totalLabel = new PdfPCell(new Phrase("TOTAL", totalFont));
+        totalLabel.setPadding(6);
+        totalLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        table.addCell(totalLabel);
+
+        PdfPCell totalValue = new PdfPCell(new Phrase("₺" + order.getTotalPrice().toPlainString(), totalFont));
+        totalValue.setPadding(6);
+        totalValue.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        table.addCell(totalValue);
+
+        return table;
     }
 }

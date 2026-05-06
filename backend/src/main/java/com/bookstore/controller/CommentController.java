@@ -12,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:3000")
@@ -36,7 +37,8 @@ public class CommentController {
         try {
             return ResponseEntity.ok(reviewService.submitComment(user, id, req));
         } catch (ResponseStatusException e) {
-            return ResponseEntity.status(e.getStatus()).body(Map.of("error", e.getReason()));
+            return ResponseEntity.status(e.getStatus())
+                    .body(Map.of("error", Objects.requireNonNullElse(e.getReason(), "Request failed")));
         } catch (NoSuchElementException e) {
             return ResponseEntity.notFound().build();
         }

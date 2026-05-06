@@ -11,6 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/products")
@@ -36,7 +37,8 @@ public class RatingController {
         try {
             return ResponseEntity.ok(reviewService.submitRating(user, id, req));
         } catch (ResponseStatusException e) {
-            return ResponseEntity.status(e.getStatus()).body(Map.of("error", e.getReason()));
+            return ResponseEntity.status(e.getStatus())
+                    .body(Map.of("error", Objects.requireNonNullElse(e.getReason(), "Request failed")));
         } catch (NoSuchElementException e) {
             return ResponseEntity.notFound().build();
         }
