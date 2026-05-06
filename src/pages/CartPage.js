@@ -8,18 +8,41 @@ import {
   clearCart,
   getCartTotal,
 } from "../services/cart";
+import { getProductById } from "../services/products";
 
 function CartPage() {
   const [cartItems, setCartItems] = useState([]);
+  const [stockMap, setStockMap] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
     setCartItems(getCart());
   }, []);
 
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      setStockMap({});
+      return;
+    }
+    Promise.all(cartItems.map((item) => getProductById(item.id)))
+      .then((products) => {
+        const map = {};
+        products.forEach((p) => { map[p.id] = p.quantityInStock ?? 0; });
+        setStockMap(map);
+      })
+      .catch(() => {});
+  }, [cartItems.length]);
+
   const totalPrice = useMemo(() => getCartTotal(cartItems), [cartItems]);
 
+  const hasStockIssues = cartItems.some((item) => {
+    const available = stockMap[item.id];
+    return available !== undefined && (available === 0 || item.quantity > available);
+  });
+
   const handleIncrease = (productId, currentQuantity) => {
+    const available = stockMap[productId];
+    if (available !== undefined && currentQuantity >= available) return;
     const updatedCart = updateCartItemQuantity(productId, currentQuantity + 1);
     setCartItems(updatedCart);
   };
@@ -49,12 +72,11 @@ function CartPage() {
 
   const handleProceedToCheckout = () => {
     if (cartItems.length === 0) return;
-
     if (!isAuthenticated()) {
       navigate("/login", { state: { from: "/checkout" } });
       return;
     }
-
+    if (hasStockIssues) return;
     navigate("/checkout");
   };
 
@@ -108,9 +130,15 @@ function CartPage() {
                     <div className="cart-item-middle">
                       <h3>{item.name}</h3>
                       <p className="price">Unit Price: ₺{Number(item.price).toFixed(2)}</p>
-                      <p className={item.inStock ? "stock in-stock" : "stock out-of-stock"}>
-                        {item.inStock ? "In Stock" : "Out of Stock"}
-                      </p>
+                      {(() => {
+                        const available = stockMap[item.id];
+                        if (available === undefined) return null;
+                        if (available === 0)
+                          return <p className="stock out-of-stock">Out of Stock</p>;
+                        if (item.quantity > available)
+                          return <p className="stock out-of-stock">Only {available} available — reduce quantity</p>;
+                        return <p className="stock in-stock">In Stock</p>;
+                      })()}
 
                       <div className="quantity-controls">
                         <button onClick={() => handleDecrease(item.id, item.quantity)}>-</button>
@@ -147,7 +175,16 @@ function CartPage() {
                 <span>₺{totalPrice.toFixed(2)}</span>
               </div>
 
-              <button className="primary-btn" onClick={handleProceedToCheckout}>
+              {hasStockIssues && (
+                <p className="stock out-of-stock" style={{ marginBottom: "8px", fontSize: "13px" }}>
+                  Some items have stock issues. Fix quantities to continue.
+                </p>
+              )}
+              <button
+                className="primary-btn"
+                onClick={handleProceedToCheckout}
+                disabled={hasStockIssues}
+              >
                 Proceed to Checkout
               </button>
 

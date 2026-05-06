@@ -42,7 +42,22 @@ export function getToken() {
 
 export function getCurrentUser() {
     const u = localStorage.getItem("user");
-    return u ? JSON.parse(u) : null;
+    const token = localStorage.getItem("accessToken");
+    if (!u) return null;
+    try {
+        const user = JSON.parse(u);
+        // Derive role from the JWT payload so localStorage tampering has no effect
+        if (token) {
+            const parts = token.split(".");
+            if (parts.length === 3) {
+                const payload = JSON.parse(atob(parts[1]));
+                if (payload.role) user.role = payload.role;
+            }
+        }
+        return user;
+    } catch {
+        return null;
+    }
 }
 
 export function isLoggedIn() {

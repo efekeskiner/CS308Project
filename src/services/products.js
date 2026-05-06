@@ -1,7 +1,7 @@
 const API_URL = "http://localhost:8080/api/products";
 
 async function getProducts() {
-  const response = await fetch(API_URL);
+  const response = await fetch(`${API_URL}?size=100`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch products");

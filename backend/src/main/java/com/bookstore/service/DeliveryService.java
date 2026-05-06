@@ -46,36 +46,43 @@ public class DeliveryService {
         if (order == null) {
             throw new IllegalStateException("Delivery " + deliveryId + " has no associated order");
         }
-        assertValidTransition(order.getStatus(), newStatus);
 
-        // propagate to order and all sibling deliveries for consistency
-        order.setStatus(newStatus);
-        orderRepository.save(order);
-
-        List<Delivery> siblings = deliveryRepository.findByOrderId(order.getId());
-        boolean completed = (newStatus == OrderStatus.DELIVERED);
-        for (Delivery d : siblings) {
-            d.setIsCompleted(completed);
-            deliveryRepository.save(d);
-        }
-
-        // return the refreshed view of the specifically-addressed delivery
-        return new DeliveryDto(deliveryRepository.findById(deliveryId).orElseThrow());
-    }
-
-    private void assertValidTransition(OrderStatus from, OrderStatus to) {
-        if (from == OrderStatus.CANCELLED) {
+        if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new IllegalStateException("Cannot change status of a cancelled order");
         }
-        if (from == OrderStatus.DELIVERED) {
-            throw new IllegalStateException("Order is already delivered");
+
+        if (newStatus == OrderStatus.IN_TRANSIT) {
+            if (order.getStatus() == OrderStatus.DELIVERED) {
+                throw new IllegalStateException("Order is already delivered");
+            }
+            // Advance order-level status; individual delivery isCompleted flags are unchanged
+            if (order.getStatus() == OrderStatus.PROCESSING) {
+                order.setStatus(OrderStatus.IN_TRANSIT);
+                orderRepository.save(order);
+            }
+        } else if (newStatus == OrderStatus.DELIVERED) {
+            if (Boolean.TRUE.equals(delivery.getIsCompleted())) {
+                throw new IllegalStateException("Delivery " + deliveryId + " is already marked as delivered");
+            }
+            // Mark only this specific delivery as completed
+            delivery.setIsCompleted(true);
+            deliveryRepository.save(delivery);
+
+            // Advance order from PROCESSING on first completed delivery
+            if (order.getStatus() == OrderStatus.PROCESSING) {
+                order.setStatus(OrderStatus.IN_TRANSIT);
+            }
+            // Only mark the order as DELIVERED when every delivery is complete
+            List<Delivery> siblings = deliveryRepository.findByOrderId(order.getId());
+            boolean allDelivered = siblings.stream().allMatch(d -> Boolean.TRUE.equals(d.getIsCompleted()));
+            if (allDelivered) {
+                order.setStatus(OrderStatus.DELIVERED);
+            }
+            orderRepository.save(order);
+        } else {
+            throw new IllegalArgumentException("Unsupported status: " + newStatus + ". Use IN_TRANSIT or DELIVERED.");
         }
-        // allowed: PROCESSING -> IN_TRANSIT, IN_TRANSIT -> DELIVERED, PROCESSING -> DELIVERED (fast-path)
-        boolean ok =
-                (from == OrderStatus.PROCESSING && (to == OrderStatus.IN_TRANSIT || to == OrderStatus.DELIVERED))
-             || (from == OrderStatus.IN_TRANSIT && to == OrderStatus.DELIVERED);
-        if (!ok) {
-            throw new IllegalStateException("Invalid status transition: " + from + " -> " + to);
-        }
+
+        return new DeliveryDto(deliveryRepository.findById(deliveryId).orElseThrow());
     }
 }
