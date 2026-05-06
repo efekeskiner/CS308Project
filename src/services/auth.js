@@ -34,6 +34,7 @@ export function logout() {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
+    localStorage.removeItem("wishlist");
 }
 
 export function getToken() {

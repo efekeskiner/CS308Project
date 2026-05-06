@@ -45,7 +45,6 @@ import static org.mockito.Mockito.*;
     @Test
         void updateStatus_throwsWhenDeliveryHasNoAssociatedOrder() {
                   Delivery delivery = new Delivery();
-                  delivery.setId(1L);
                   delivery.setOrder(null);
                   when(deliveryRepository.findById(1L)).thenReturn(Optional.of(delivery));
 
@@ -59,7 +58,6 @@ import static org.mockito.Mockito.*;
                   order.setStatus(OrderStatus.CANCELLED);
 
             Delivery delivery = new Delivery();
-                  delivery.setId(1L);
                   delivery.setOrder(order);
 
             when(deliveryRepository.findById(1L)).thenReturn(Optional.of(delivery));
@@ -74,7 +72,6 @@ import static org.mockito.Mockito.*;
                   order.setStatus(OrderStatus.DELIVERED);
 
             Delivery delivery = new Delivery();
-                  delivery.setId(1L);
                   delivery.setOrder(order);
 
             when(deliveryRepository.findById(1L)).thenReturn(Optional.of(delivery));
@@ -90,10 +87,8 @@ import static org.mockito.Mockito.*;
                   when(orderRepository.save(order)).thenReturn(order);
 
             Delivery delivery = new Delivery();
-                  delivery.setId(1L);
                   delivery.setOrder(order);
                   when(deliveryRepository.findById(1L)).thenReturn(Optional.of(delivery));
-                  when(deliveryRepository.save(delivery)).thenReturn(delivery);
 
             var dto = deliveryService.updateStatus(1L, OrderStatus.IN_TRANSIT);
 

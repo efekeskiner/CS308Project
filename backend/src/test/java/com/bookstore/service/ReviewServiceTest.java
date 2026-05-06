@@ -108,7 +108,7 @@ class ReviewServiceTest {
 
                 var dto = reviewService.submitRating(user, 10L, req);
                 assertNotNull(dto);
-                assertEquals(8.0, dto.getAverage());
+                assertEquals(8.0, dto.getAverageRating());
             }
 
       @Test
@@ -150,7 +150,7 @@ class ReviewServiceTest {
 
                 reviewService.approveComment(1L);
 
-                assertTrue(review.isContentApproved());
+                assertTrue(review.getContentApproved());
                 verify(reviewRepository).save(review);
             }
 
@@ -172,7 +172,7 @@ class ReviewServiceTest {
                 reviewService.rejectComment(2L);
 
                 assertNull(review.getContent());
-                assertFalse(review.isContentApproved());
+                assertFalse(review.getContentApproved());
                 verify(reviewRepository).save(review);
             }
 

@@ -46,6 +46,7 @@ public class User {
     public Role getRole() { return role; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 
+    public void setId(Long id) { this.id = id; }
     public void setName(String name) { this.name = name; }
     public void setEmail(String email) { this.email = email; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }

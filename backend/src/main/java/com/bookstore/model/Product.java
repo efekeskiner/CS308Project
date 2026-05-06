@@ -70,6 +70,7 @@ public class Product {
     public Category getCategory() { return category; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 
+    public void setId(Long id) { this.id = id; }
     public void setName(String name) { this.name = name; }
     public void setModel(String model) { this.model = model; }
     public void setSerialNumber(String serialNumber) { this.serialNumber = serialNumber; }

@@ -101,7 +101,6 @@ import static org.mockito.Mockito.*;
                   user.setRole(Role.CUSTOMER);
 
             Order order = new Order();
-                  order.setId(10L);
                   order.setUser(user);
                   order.setStatus(OrderStatus.IN_TRANSIT);
 
@@ -151,7 +150,6 @@ import static org.mockito.Mockito.*;
                   other.setRole(Role.CUSTOMER);
 
             Order order = new Order();
-                  order.setId(5L);
                   order.setUser(owner);
 
             when(orderRepository.findById(5L)).thenReturn(Optional.of(order));
