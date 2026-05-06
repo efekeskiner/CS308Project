@@ -190,7 +190,13 @@ class ReviewServiceTest {
 
       @Test
       void getPendingComments_returnsOnlyUnapproved() {
-                Review r = new Review();
+                User user = new User();
+                ReflectionTestUtils.setField(user, "id", 1L);
+                Product product = new Product();
+                ReflectionTestUtils.setField(product, "id", 10L);
+                product.setName("Some Book");
+
+                Review r = new Review(user, product, 4);
                 r.setContent("Pending comment");
                 r.setContentApproved(false);
                 when(reviewRepository.findByContentIsNotNullAndContentApprovedFalse())

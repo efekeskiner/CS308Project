@@ -133,18 +133,15 @@ import static org.mockito.Mockito.*;
 
     @Test
         void delete_throwsWhenCategoryNotFound() {
-                  when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
                   assertThrows(NoSuchElementException.class,
                                                () -> categoryService.delete(99L));
         }
 
     @Test
         void delete_deletesExistingCategory() {
-                  Category cat = new Category("Fiction");
-                  ReflectionTestUtils.setField(cat, "id", 5L);
-                  when(categoryRepository.findById(5L)).thenReturn(Optional.of(cat));
+                  when(categoryRepository.existsById(5L)).thenReturn(true);
 
             categoryService.delete(5L);
-                  verify(categoryRepository).delete(cat);
+                  verify(categoryRepository).deleteById(5L);
         }
   }
