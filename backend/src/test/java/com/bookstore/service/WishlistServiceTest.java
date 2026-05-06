@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -41,9 +42,9 @@ import static org.mockito.Mockito.*;
     @Test
         void getWishlist_returnsMappedDtos() {
                   User user = new User();
-                  user.setId(1L);
+                  ReflectionTestUtils.setField(user, "id", 1L);
                   Product product = new Product();
-                  product.setId(10L);
+                  ReflectionTestUtils.setField(product, "id", 10L);
                   product.setName("Clean Code");
                   Wishlist entry = new Wishlist(user, product);
                   when(wishlistRepository.findByUserId(1L)).thenReturn(List.of(entry));
@@ -54,7 +55,7 @@ import static org.mockito.Mockito.*;
     @Test
         void addToWishlist_doesNothingWhenAlreadyInWishlist() {
                   User user = new User();
-                  user.setId(1L);
+                  ReflectionTestUtils.setField(user, "id", 1L);
                   when(wishlistRepository.existsByUserIdAndProductId(1L, 5L)).thenReturn(true);
                   wishlistService.addToWishlist(user, 5L);
                   verify(wishlistRepository, never()).save(any());
@@ -63,7 +64,7 @@ import static org.mockito.Mockito.*;
     @Test
         void addToWishlist_throwsWhenProductNotFound() {
                   User user = new User();
-                  user.setId(1L);
+                  ReflectionTestUtils.setField(user, "id", 1L);
                   when(wishlistRepository.existsByUserIdAndProductId(1L, 99L)).thenReturn(false);
                   when(productRepository.findById(99L)).thenReturn(Optional.empty());
                   assertThrows(NoSuchElementException.class,
@@ -73,9 +74,9 @@ import static org.mockito.Mockito.*;
     @Test
         void addToWishlist_savesNewEntryWhenProductExists() {
                   User user = new User();
-                  user.setId(1L);
+                  ReflectionTestUtils.setField(user, "id", 1L);
                   Product product = new Product();
-                  product.setId(5L);
+                  ReflectionTestUtils.setField(product, "id", 5L);
                   when(wishlistRepository.existsByUserIdAndProductId(1L, 5L)).thenReturn(false);
                   when(productRepository.findById(5L)).thenReturn(Optional.of(product));
                   wishlistService.addToWishlist(user, 5L);

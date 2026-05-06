@@ -1,6 +1,5 @@
 package com.bookstore.service;
 
-import com.bookstore.dto.CategoryDto;
 import com.bookstore.dto.CategoryRequest;
 import com.bookstore.model.Category;
 import com.bookstore.repository.CategoryRepository;
@@ -9,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -78,7 +78,7 @@ import static org.mockito.Mockito.*;
                   req.setName("Science");
                   when(categoryRepository.existsByName("Science")).thenReturn(false);
                   Category saved = new Category("Science");
-                  saved.setId(1L);
+                  ReflectionTestUtils.setField(saved, "id", 1L);
                   when(categoryRepository.save(any())).thenReturn(saved);
 
             var dto = categoryService.create(req);
@@ -101,7 +101,7 @@ import static org.mockito.Mockito.*;
     @Test
         void update_throwsWhenNewNameAlreadyTakenByAnotherCategory() {
                   Category existing = new Category("OldName");
-                  existing.setId(1L);
+                  ReflectionTestUtils.setField(existing, "id", 1L);
                   when(categoryRepository.findById(1L)).thenReturn(Optional.of(existing));
 
             CategoryRequest req = new CategoryRequest();
@@ -115,7 +115,7 @@ import static org.mockito.Mockito.*;
     @Test
         void update_successfullyUpdatesName() {
                   Category existing = new Category("OldName");
-                  existing.setId(1L);
+                  ReflectionTestUtils.setField(existing, "id", 1L);
                   when(categoryRepository.findById(1L)).thenReturn(Optional.of(existing));
 
             CategoryRequest req = new CategoryRequest();
@@ -141,7 +141,7 @@ import static org.mockito.Mockito.*;
     @Test
         void delete_deletesExistingCategory() {
                   Category cat = new Category("Fiction");
-                  cat.setId(5L);
+                  ReflectionTestUtils.setField(cat, "id", 5L);
                   when(categoryRepository.findById(5L)).thenReturn(Optional.of(cat));
 
             categoryService.delete(5L);

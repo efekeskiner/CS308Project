@@ -47,7 +47,6 @@ public class Order {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public List<OrderItem> getItems() { return items; }
 
-    public void setId(Long id) { this.id = id; }
     public void setUser(User user) { this.user = user; }
     public void setTotalPrice(BigDecimal totalPrice) { this.totalPrice = totalPrice; }
     public void setStatus(OrderStatus status) { this.status = status; }

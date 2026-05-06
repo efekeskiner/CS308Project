@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -58,7 +59,7 @@ class ReviewServiceTest {
       @Test
       void submitRating_throwsWhenUserHasNotPurchasedProduct() {
                 User user = new User();
-                user.setId(1L);
+                ReflectionTestUtils.setField(user, "id", 1L);
                 RatingRequest req = new RatingRequest();
                 req.setScore(5);
 
@@ -72,7 +73,7 @@ class ReviewServiceTest {
       @Test
       void submitRating_throwsWhenProductNotFound() {
                 User user = new User();
-                user.setId(1L);
+                ReflectionTestUtils.setField(user, "id", 1L);
                 RatingRequest req = new RatingRequest();
                 req.setScore(7);
 
@@ -87,10 +88,10 @@ class ReviewServiceTest {
       @Test
       void submitRating_createsNewReviewWhenNoneExists() {
                 User user = new User();
-                user.setId(1L);
+                ReflectionTestUtils.setField(user, "id", 1L);
 
                 Product product = new Product();
-                product.setId(10L);
+                ReflectionTestUtils.setField(product, "id", 10L);
 
                 RatingRequest req = new RatingRequest();
                 req.setScore(8);
@@ -123,7 +124,7 @@ class ReviewServiceTest {
       @Test
       void submitComment_throwsWhenNoRatingExists() {
                 User user = new User();
-                user.setId(1L);
+                ReflectionTestUtils.setField(user, "id", 1L);
                 CommentRequest req = new CommentRequest();
                 req.setContent("Great book!");
 

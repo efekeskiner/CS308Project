@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -70,7 +71,7 @@ import static org.mockito.Mockito.*;
                   User user = new User();
 
             Product product = new Product();
-                  product.setId(1L);
+                  ReflectionTestUtils.setField(product, "id", 1L);
                   product.setQuantityInStock(2);
 
             OrderItemRequest item = new OrderItemRequest();
@@ -97,7 +98,7 @@ import static org.mockito.Mockito.*;
     @Test
         void cancelOrder_throwsWhenOrderIsNotProcessing() {
                   User user = new User();
-                  user.setId(1L);
+                  ReflectionTestUtils.setField(user, "id", 1L);
                   user.setRole(Role.CUSTOMER);
 
             Order order = new Order();
@@ -113,15 +114,15 @@ import static org.mockito.Mockito.*;
     @Test
         void cancelOrder_throwsSecurityExceptionForDifferentUser() {
                   User owner = new User();
-                  owner.setId(1L);
+                  ReflectionTestUtils.setField(owner, "id", 1L);
                   owner.setRole(Role.CUSTOMER);
 
             User attacker = new User();
-                  attacker.setId(2L);
+                  ReflectionTestUtils.setField(attacker, "id", 2L);
                   attacker.setRole(Role.CUSTOMER);
 
             Order order = new Order();
-                  order.setId(10L);
+                  ReflectionTestUtils.setField(order, "id", 10L);
                   order.setUser(owner);
                   order.setStatus(OrderStatus.PROCESSING);
 
@@ -142,11 +143,11 @@ import static org.mockito.Mockito.*;
     @Test
         void getById_throwsSecurityExceptionForWrongUser() {
                   User owner = new User();
-                  owner.setId(1L);
+                  ReflectionTestUtils.setField(owner, "id", 1L);
                   owner.setRole(Role.CUSTOMER);
 
             User other = new User();
-                  other.setId(2L);
+                  ReflectionTestUtils.setField(other, "id", 2L);
                   other.setRole(Role.CUSTOMER);
 
             Order order = new Order();
@@ -161,14 +162,14 @@ import static org.mockito.Mockito.*;
     @Test
         void getById_managerCanViewAnyOrder() {
                   User manager = new User();
-                  manager.setId(99L);
+                  ReflectionTestUtils.setField(manager, "id", 99L);
                   manager.setRole(Role.PRODUCT_MANAGER);
 
             User owner = new User();
-                  owner.setId(1L);
+                  ReflectionTestUtils.setField(owner, "id", 1L);
 
             Order order = new Order();
-                  order.setId(5L);
+                  ReflectionTestUtils.setField(order, "id", 5L);
                   order.setUser(owner);
 
             when(orderRepository.findById(5L)).thenReturn(Optional.of(order));
