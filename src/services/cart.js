@@ -34,6 +34,7 @@ export function addToCart(product, quantityToAdd = 1) {
       price: Number(product.price) || 0,
       quantity: Math.min(safeQuantityToAdd, stockLimit),
       imageUrl: product.image || product.imageUrl || "",
+      serialNumber: product.serialNumber || "",
       inStock: product.inStock !== false,
       quantityInStock: product.quantityInStock,
     });
