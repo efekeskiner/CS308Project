@@ -171,6 +171,15 @@ function ProductDetailPage() {
     ratingInfo?.averageRating ?? product.averageRating ?? "No rating yet";
   const ratingCount = ratingInfo?.ratingCount ?? product.ratingCount;
 
+  const currentUserReview = comments.find((comment) => {
+    const commentUserName = String(comment.userName || "").trim().toLowerCase();
+    const currentUserName = String(currentUser?.name || "").trim().toLowerCase();
+
+    return currentUserName && commentUserName === currentUserName;
+  });
+
+  const isUpdatingReview = Boolean(currentUserReview);
+
   const increaseQuantity = () => {
     setQuantity((currentQuantity) =>
       Math.min(currentQuantity + 1, stockCount)
@@ -242,12 +251,18 @@ function ProductDetailPage() {
     try {
       await submitRating(id, selectedRating);
 
-      if (commentText.trim()) {
+      const hasComment = commentText.trim().length > 0;
+
+      if (hasComment) {
         await submitComment(id, commentText.trim());
       }
 
       setReviewMessage(
-        "Your review was submitted. Your comment will be visible after product manager approval."
+        isUpdatingReview
+          ? "Your review was updated."
+          : hasComment
+            ? "Your review was submitted. Your comment will be visible after product manager approval."
+            : "Your rating was submitted."
       );
       setSelectedRating(0);
       setCommentText("");
@@ -402,7 +417,7 @@ function ProductDetailPage() {
       </section>
 
       <section className="review-section">
-        <h2>Rate & Comment</h2>
+        <h2>{isUpdatingReview ? "Update Your Review" : "Rate & Comment"}</h2>
 
         {!loggedIn && (
           <p className="muted-text">
@@ -453,7 +468,7 @@ function ProductDetailPage() {
             />
 
             <button type="submit" className="submit-review-button">
-              Submit Review
+              {isUpdatingReview ? "Update Review" : "Submit Review"}
             </button>
           </form>
         )}
