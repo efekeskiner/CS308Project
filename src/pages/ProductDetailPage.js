@@ -25,6 +25,7 @@ function ProductDetailPage() {
 
   const [selectedRating, setSelectedRating] = useState(0);
   const [commentText, setCommentText] = useState("");
+  const [quantity, setQuantity] = useState(1);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -58,6 +59,7 @@ function ProductDetailPage() {
 
         const productData = await getProductById(id);
         setProduct(productData);
+        setQuantity(1);
 
         try {
           const commentsData = await getApprovedComments(id);
@@ -152,10 +154,41 @@ function ProductDetailPage() {
     };
   }, [product, loggedIn, isCustomer]);
 
+  if (loading) {
+    return <div className="product-detail-page">Loading product...</div>;
+  }
+
+  if (error) {
+    return <div className="product-detail-page">{error}</div>;
+  }
+
+  if (!product) {
+    return <div className="product-detail-page">Product not found.</div>;
+  }
+
+  const stockCount = Number(product.quantityInStock) || 0;
+  const inStock = product.inStock ?? stockCount > 0;
+
+  const averageRating =
+    ratingInfo?.averageRating ?? product.averageRating ?? "No rating yet";
+  const ratingCount = ratingInfo?.ratingCount ?? product.ratingCount;
+
+  const increaseQuantity = () => {
+    setQuantity((currentQuantity) =>
+      Math.min(currentQuantity + 1, stockCount)
+    );
+  };
+
+  const decreaseQuantity = () => {
+    setQuantity((currentQuantity) =>
+      Math.max(currentQuantity - 1, 1)
+    );
+  };
+
   const handleAddToCart = () => {
     if (!product || !inStock) return;
 
-    addToCart(product);
+    addToCart(product, quantity);
   };
 
   const handleWishlistToggle = async () => {
@@ -233,23 +266,6 @@ function ProductDetailPage() {
     }
   };
 
-  if (loading) {
-    return <div className="product-detail-page">Loading product...</div>;
-  }
-
-  if (error) {
-    return <div className="product-detail-page">{error}</div>;
-  }
-
-  if (!product) {
-    return <div className="product-detail-page">Product not found.</div>;
-  }
-
-  const inStock = product.inStock ?? product.quantityInStock > 0;
-  const averageRating =
-    ratingInfo?.averageRating ?? product.averageRating ?? "No rating yet";
-  const ratingCount = ratingInfo?.ratingCount ?? product.ratingCount;
-
   const getBookImage = (product) => {
     if (product.imageUrl) {
       return product.imageUrl;
@@ -307,7 +323,7 @@ function ProductDetailPage() {
             <p><strong>ISBN:</strong> {product.serialNumber || "-"}</p>
             <p><strong>Distributor:</strong> {product.distributorInfo || "-"}</p>
             <p><strong>Warranty:</strong> {product.warrantyStatus || "-"}</p>
-            <p><strong>Stock:</strong> {inStock ? product.quantityInStock : "Out of stock"}</p>
+            <p><strong>Stock:</strong> {inStock ? stockCount : "Out of stock"}</p>
             <p>
               <strong>Average Rating:</strong> {averageRating}
               {ratingCount !== undefined && ratingCount !== null ? ` (${ratingCount})` : ""}
@@ -316,12 +332,40 @@ function ProductDetailPage() {
 
           {isCustomer && (
             <div className="product-action-buttons">
+              {inStock && (
+                <div className="quantity-selector">
+                  <span className="quantity-label">Quantity</span>
+
+                  <div className="quantity-controls">
+                    <button
+                      type="button"
+                      className="quantity-button"
+                      onClick={decreaseQuantity}
+                      disabled={quantity <= 1}
+                    >
+                      −
+                    </button>
+
+                    <span className="quantity-value">{quantity}</span>
+
+                    <button
+                      type="button"
+                      className="quantity-button"
+                      onClick={increaseQuantity}
+                      disabled={quantity >= stockCount}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <button
                 className={inStock ? "add-to-cart-button" : "add-to-cart-button disabled"}
                 disabled={!inStock}
                 onClick={handleAddToCart}
               >
-                {inStock ? "Add to Cart" : "Out of Stock"}
+                {inStock ? `Add ${quantity} to Cart` : "Out of Stock"}
               </button>
 
               <button
