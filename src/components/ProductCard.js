@@ -120,7 +120,19 @@ function ProductCard({ product, onAddToCart, isAdded }) {
   if (!product) return null;
 
   const hasDiscount = Number(product.discountRate) > 0;
-  const imageSrc = product.imageUrl || FALLBACK_IMAGE;
+  const getBookImage = (product) => {
+    if (product.imageUrl) {
+      return product.imageUrl;
+    }
+
+    if (product.serialNumber) {
+      return `https://covers.openlibrary.org/b/isbn/${product.serialNumber}-L.jpg`;
+    }
+
+    return FALLBACK_IMAGE;
+  };
+
+  const imageSrc = getBookImage(product);
 
   return (
     <div style={styles.card} onClick={handleCardClick}>
@@ -213,9 +225,14 @@ const styles = {
   image: {
     width: "100%",
     height: "260px",
-    objectFit: "cover",
+    objectFit: "contain",
+    objectPosition: "center",
+    backgroundColor: "#ffffff",
+    border: "1px solid #eee5dc",
     borderRadius: "12px",
     marginBottom: "16px",
+    padding: "8px",
+    boxSizing: "border-box",
   },
   name: {
     fontSize: "24px",

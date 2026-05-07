@@ -30,6 +30,15 @@ function Login() {
         <div className="brand">Online Bookstore</div>
         <h1>Login</h1>
         <p className="subtitle">Sign in to access your account and continue shopping.</p>
+
+        <button
+          type="button"
+          className="back-to-products-btn"
+          onClick={() => navigate("/products")}
+        >
+          ← Go Back to Products
+        </button>
+
         <form className="login-form" onSubmit={handleSubmit}>
           <label htmlFor="email">Email</label>
           <input
