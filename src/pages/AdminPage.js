@@ -130,10 +130,10 @@ function DeliveriesPanel() {
           <p style={styles.metaText}>Product: {d.productName} × {d.quantity}</p>
           <p style={styles.metaText}>Address: {d.deliveryAddress}</p>
           <p style={styles.metaText}>Total: ₺{Number(d.totalPrice).toFixed(2)}</p>
-          <p style={styles.metaText}>Status: <strong>{d.orderStatus || "PROCESSING"}</strong></p>
-          {d.orderStatus !== "DELIVERED" && d.orderStatus !== "CANCELLED" && (
+          <p style={styles.metaText}>Status: <strong>{d.isCompleted ? "DELIVERED" : d.isInTransit ? "IN_TRANSIT" : "PROCESSING"}</strong></p>
+          {!d.isCompleted && d.orderStatus !== "CANCELLED" && (
             <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-              {d.orderStatus === "PROCESSING" && (
+              {!d.isInTransit && (
                 <button style={styles.actionBtn} onClick={() => updateStatus(d.id, "IN_TRANSIT")}>Mark In-Transit</button>
               )}
               <button style={styles.approveBtn} onClick={() => updateStatus(d.id, "DELIVERED")}>Mark Delivered</button>
