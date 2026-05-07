@@ -4,12 +4,15 @@ import { addToCart } from "../services/cart";
 import { getProductById } from "../services/products";
 import { getProductReviews, submitComment } from "../services/comments";
 import { getProductRating, submitRating } from "../services/ratings";
-import { getCurrentUser } from "../services/auth";
+import { getCurrentUser, isLoggedIn as checkIsLoggedIn, authFetch } from "../services/auth";
 import { getMyOrders } from "../services/orders";
+import { isInWishlist, toggleWishlist } from "../services/wishlist";
 import "./ProductDetailPage.css";
 
 const FALLBACK_IMAGE =
   "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='420' viewBox='0 0 300 420'%3E%3Crect width='300' height='420' fill='%23f3ece3'/%3E%3Crect x='45' y='55' width='210' height='310' rx='16' fill='%23ffffff' stroke='%23d1c7bc' stroke-width='3'/%3E%3Ctext x='150' y='195' text-anchor='middle' font-family='Arial' font-size='24' fill='%236b4f3b'%3ENo Image%3C/text%3E%3Ctext x='150' y='230' text-anchor='middle' font-family='Arial' font-size='16' fill='%238b7b72'%3EBook Cover%3C/text%3E%3C/svg%3E";
+
+const WISHLIST_API = "http://localhost:8080/api/wishlist";
 
 function ProductDetailPage() {
   const { id } = useParams();
@@ -22,20 +25,21 @@ function ProductDetailPage() {
 
   const [selectedRating, setSelectedRating] = useState(0);
   const [commentText, setCommentText] = useState("");
+  const [quantity, setQuantity] = useState(1);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [reviewMessage, setReviewMessage] = useState("");
+  const [wishlisted, setWishlisted] = useState(false);
 
-  const token = localStorage.getItem("accessToken");
-  const isLoggedIn = !!token;
+  const loggedIn = checkIsLoggedIn();
   const currentUser = getCurrentUser();
   const isCustomer = !currentUser || currentUser.role === "CUSTOMER";
 
   const orderList = Array.isArray(orders) ? orders : orders.content || [];
 
   const canReview =
-    isLoggedIn &&
+    loggedIn &&
     isCustomer &&
     orderList.some((order) => {
       const matchingItem = (order.items || []).find((item) => Number(item.productId) === Number(id));
@@ -53,6 +57,7 @@ function ProductDetailPage() {
 
         const productData = await getProductById(id);
         setProduct(productData);
+        setQuantity(1);
 
         try {
           const commentsData = await getProductReviews(id);
@@ -70,7 +75,7 @@ function ProductDetailPage() {
           setRatingInfo(null);
         }
 
-        if (isLoggedIn && isCustomer) {
+        if (loggedIn && isCustomer) {
           try {
             const orderData = await getMyOrders();
             setOrders(orderData);
@@ -88,13 +93,142 @@ function ProductDetailPage() {
     }
 
     loadProductDetail();
-  }, [id, isLoggedIn, isCustomer]);
+  }, [id, loggedIn, isCustomer]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadWishlistStatus = async () => {
+      if (!product || !isCustomer) {
+        setWishlisted(false);
+        return;
+      }
+
+      if (!loggedIn) {
+        setWishlisted(isInWishlist(product.id));
+        return;
+      }
+
+      try {
+        const response = await authFetch(WISHLIST_API);
+
+        if (!response.ok) {
+          throw new Error("Wishlist could not be loaded");
+        }
+
+        const data = await response.json();
+
+        const wishlistItems = Array.isArray(data)
+          ? data
+          : data?.content || data?.data || data?.items || [];
+
+        const exists = wishlistItems.some((item) => {
+          const wishlistProductId =
+            item.product?.id ??
+            item.product?.productId ??
+            item.productId ??
+            item.book?.id ??
+            item.bookId ??
+            item.id;
+
+          return Number(wishlistProductId) === Number(product.id);
+        });
+
+        if (!cancelled) {
+          setWishlisted(exists);
+        }
+      } catch (err) {
+        console.error("Wishlist status could not be loaded:", err);
+        if (!cancelled) {
+          setWishlisted(false);
+        }
+      }
+    };
+
+    loadWishlistStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [product, loggedIn, isCustomer]);
+
+  if (loading) {
+    return <div className="product-detail-page">Loading product...</div>;
+  }
+
+  if (error) {
+    return <div className="product-detail-page">{error}</div>;
+  }
+
+  if (!product) {
+    return <div className="product-detail-page">Product not found.</div>;
+  }
+
+  const stockCount = Number(product.quantityInStock) || 0;
+  const inStock = product.inStock ?? stockCount > 0;
+
+  const averageRating =
+    ratingInfo?.averageRating ?? product.averageRating ?? "No rating yet";
+  const ratingCount = ratingInfo?.ratingCount ?? product.ratingCount;
+
+  const increaseQuantity = () => {
+    setQuantity((currentQuantity) =>
+      Math.min(currentQuantity + 1, stockCount)
+    );
+  };
+
+  const decreaseQuantity = () => {
+    setQuantity((currentQuantity) =>
+      Math.max(currentQuantity - 1, 1)
+    );
+  };
 
   const handleAddToCart = () => {
-    if (!product || !product.inStock) return;
+    if (!product || !inStock) return;
 
-    addToCart(product);
-    alert("Product added to cart.");
+    addToCart(product, quantity);
+  };
+
+  const handleWishlistToggle = async () => {
+    if (!product || !isCustomer) return;
+
+    if (!loggedIn) {
+      const updatedWishlist = toggleWishlist(product);
+      const nowWishlisted = updatedWishlist.some(
+        (item) => Number(item.id) === Number(product.id)
+      );
+      setWishlisted(nowWishlisted);
+      return;
+    }
+
+    const previousWishlisted = wishlisted;
+    const nextWishlisted = !wishlisted;
+
+    setWishlisted(nextWishlisted);
+
+    try {
+      if (nextWishlisted) {
+        const response = await authFetch(WISHLIST_API, {
+          method: "POST",
+          body: JSON.stringify({ productId: Number(product.id) }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Product could not be added to wishlist");
+        }
+      } else {
+        const response = await authFetch(`${WISHLIST_API}/${product.id}`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          throw new Error("Product could not be removed from wishlist");
+        }
+      }
+    } catch (err) {
+      console.error("Wishlist could not be updated:", err);
+      setWishlisted(previousWishlisted);
+    }
   };
 
   const handleSubmitReview = async (event) => {
@@ -130,23 +264,19 @@ function ProductDetailPage() {
     }
   };
 
-  if (loading) {
-    return <div className="product-detail-page">Loading product...</div>;
-  }
+  const getBookImage = (product) => {
+    if (product.imageUrl) {
+      return product.imageUrl;
+    }
 
-  if (error) {
-    return <div className="product-detail-page">{error}</div>;
-  }
+    if (product.serialNumber) {
+      return `https://covers.openlibrary.org/b/isbn/${product.serialNumber}-L.jpg`;
+    }
 
-  if (!product) {
-    return <div className="product-detail-page">Product not found.</div>;
-  }
+    return FALLBACK_IMAGE;
+  };
 
-  const inStock = product.inStock ?? product.quantityInStock > 0;
-  const averageRating =
-    ratingInfo?.averageRating ?? product.averageRating ?? "No rating yet";
-  const ratingCount = ratingInfo?.ratingCount ?? product.ratingCount;
-  const imageSrc = product.imageUrl || FALLBACK_IMAGE;
+  const imageSrc = getBookImage(product);
 
   return (
     <div className="product-detail-page">
@@ -191,7 +321,7 @@ function ProductDetailPage() {
             <p><strong>ISBN:</strong> {product.serialNumber || "-"}</p>
             <p><strong>Distributor:</strong> {product.distributorInfo || "-"}</p>
             <p><strong>Warranty:</strong> {product.warrantyStatus || "-"}</p>
-            <p><strong>Stock:</strong> {inStock ? product.quantityInStock : "Out of stock"}</p>
+            <p><strong>Stock:</strong> {inStock ? stockCount : "Out of stock"}</p>
             <p>
               <strong>Average Rating:</strong> {averageRating}
               {ratingCount !== undefined && ratingCount !== null ? ` (${ratingCount})` : ""}
@@ -199,13 +329,50 @@ function ProductDetailPage() {
           </div>
 
           {isCustomer && (
-            <button
-              className={inStock ? "add-to-cart-button" : "add-to-cart-button disabled"}
-              disabled={!inStock}
-              onClick={handleAddToCart}
-            >
-              {inStock ? "Add to Cart" : "Out of Stock"}
-            </button>
+            <div className="product-action-buttons">
+              {inStock && (
+                <div className="quantity-selector">
+                  <span className="quantity-label">Quantity</span>
+
+                  <div className="quantity-controls">
+                    <button
+                      type="button"
+                      className="quantity-button"
+                      onClick={decreaseQuantity}
+                      disabled={quantity <= 1}
+                    >
+                      −
+                    </button>
+
+                    <span className="quantity-value">{quantity}</span>
+
+                    <button
+                      type="button"
+                      className="quantity-button"
+                      onClick={increaseQuantity}
+                      disabled={quantity >= stockCount}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <button
+                className={inStock ? "add-to-cart-button" : "add-to-cart-button disabled"}
+                disabled={!inStock}
+                onClick={handleAddToCart}
+              >
+                {inStock ? `Add ${quantity} to Cart` : "Out of Stock"}
+              </button>
+
+              <button
+                className={wishlisted ? "wishlist-detail-button active" : "wishlist-detail-button"}
+                onClick={handleWishlistToggle}
+              >
+                {wishlisted ? "♥ Remove from Wishlist" : "♡ Add to Wishlist"}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -237,19 +404,19 @@ function ProductDetailPage() {
       <section className="review-section">
         <h2>Rate & Comment</h2>
 
-        {!isLoggedIn && (
+        {!loggedIn && (
           <p className="muted-text">
             You must log in to rate or comment on this product.
           </p>
         )}
 
-        {isLoggedIn && !isCustomer && (
+        {loggedIn && !isCustomer && (
           <p className="muted-text">
             Manager accounts cannot rate, comment, or purchase products.
           </p>
         )}
 
-        {isLoggedIn && isCustomer && !canReview && (
+        {loggedIn && isCustomer && !canReview && (
           <p className="muted-text">
             You can review this product only after purchasing it and receiving delivery.
           </p>

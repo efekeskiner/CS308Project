@@ -63,6 +63,15 @@ function Registration() {
         <div className="brand">Online Bookstore</div>
         <h1>Create Account</h1>
         <p className="subtitle">Sign up to start shopping and manage your account</p>
+
+        <button
+          type="button"
+          className="back-to-products-btn"
+          onClick={() => navigate("/products")}
+        >
+          ← Go Back to Products
+        </button>
+
         <form className="register-form" onSubmit={handleSubmit}>
 
           <label htmlFor="name">Full Name</label>
