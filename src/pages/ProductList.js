@@ -3,6 +3,8 @@ import { addToCart, getCart } from "../services/cart";
 import ProductCard from "../components/ProductCard";
 import getProducts from "../services/products";
 
+const PRODUCTS_PER_PAGE = 20;
+
 function ProductList() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,7 +14,7 @@ function ProductList() {
   const [sortBy, setSortBy] = useState("default");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [addedProductId, setAddedProductId] = useState(null);
-
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     getProducts()
@@ -26,6 +28,10 @@ function ProductList() {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortBy, selectedCategory]);
 
   const categories = [
     "All",
@@ -55,6 +61,15 @@ function ProductList() {
     return filtered;
   }, [products, searchTerm, sortBy, selectedCategory]);
 
+  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+    const endIndex = startIndex + PRODUCTS_PER_PAGE;
+
+    return filteredProducts.slice(startIndex, endIndex);
+  }, [filteredProducts, currentPage]);
+
   const handleAddToCart = (product) => {
     if (!product.inStock) return;
 
@@ -66,6 +81,14 @@ function ProductList() {
     }, 1200);
   };
 
+  const goToPreviousPage = () => {
+    setCurrentPage((page) => Math.max(page - 1, 1));
+  };
+
+  const goToNextPage = () => {
+    setCurrentPage((page) => Math.min(page + 1, totalPages));
+  };
+
   return (
     <div style={styles.page}>
       <div style={styles.headerRow}>
@@ -75,8 +98,6 @@ function ProductList() {
             Discover books by title, author, category, price, and popularity.
           </p>
         </div>
-
-
       </div>
 
       <div style={styles.topBar}>
@@ -112,25 +133,85 @@ function ProductList() {
         </select>
       </div>
 
+      {!loading && !error && filteredProducts.length > 0 && (
+        <p style={styles.resultCount}>
+          Showing {(currentPage - 1) * PRODUCTS_PER_PAGE + 1}-
+          {Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)} of{" "}
+          {filteredProducts.length} books
+        </p>
+      )}
+
       {loading ? (
         <p style={styles.noResult}>Loading books...</p>
       ) : error ? (
         <p style={styles.noResult}>{error}</p>
       ) : (
-        <div style={styles.grid}>
-          {filteredProducts.length > 0 ? (
-            filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onAddToCart={handleAddToCart}
-                isAdded={addedProductId === product.id}
-              />
-            ))
-          ) : (
-            <p style={styles.noResult}>No books found.</p>
+        <>
+          <div style={styles.grid}>
+            {paginatedProducts.length > 0 ? (
+              paginatedProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAddToCart={handleAddToCart}
+                  isAdded={addedProductId === product.id}
+                />
+              ))
+            ) : (
+              <p style={styles.noResult}>No books found.</p>
+            )}
+          </div>
+
+          {totalPages > 1 && (
+            <div style={styles.pagination}>
+              <button
+                type="button"
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                style={{
+                  ...styles.paginationButton,
+                  ...(currentPage === 1 ? styles.paginationButtonDisabled : {}),
+                }}
+              >
+                Previous
+              </button>
+
+              <div style={styles.pageNumbers}>
+                {Array.from({ length: totalPages }, (_, index) => {
+                  const pageNumber = index + 1;
+
+                  return (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      onClick={() => setCurrentPage(pageNumber)}
+                      style={{
+                        ...styles.pageNumberButton,
+                        ...(currentPage === pageNumber
+                          ? styles.activePageNumberButton
+                          : {}),
+                      }}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                style={{
+                  ...styles.paginationButton,
+                  ...(currentPage === totalPages ? styles.paginationButtonDisabled : {}),
+                }}
+              >
+                Next
+              </button>
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
@@ -168,7 +249,7 @@ const styles = {
     justifyContent: "center",
     gap: "16px",
     flexWrap: "wrap",
-    marginBottom: "32px",
+    marginBottom: "16px",
   },
   searchInput: {
     width: "360px",
@@ -186,6 +267,12 @@ const styles = {
     outline: "none",
     backgroundColor: "#fff",
   },
+  resultCount: {
+    textAlign: "center",
+    color: "#6b5b53",
+    fontSize: "15px",
+    marginBottom: "28px",
+  },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
@@ -197,6 +284,48 @@ const styles = {
     fontSize: "18px",
     color: "#6b5b53",
     gridColumn: "1 / -1",
+  },
+  pagination: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "12px",
+    flexWrap: "wrap",
+    marginTop: "32px",
+  },
+  paginationButton: {
+    padding: "10px 16px",
+    borderRadius: "10px",
+    border: "1px solid #6b4f3b",
+    backgroundColor: "#6b4f3b",
+    color: "#fff",
+    fontSize: "15px",
+    cursor: "pointer",
+  },
+  paginationButtonDisabled: {
+    backgroundColor: "#c7b8ab",
+    borderColor: "#c7b8ab",
+    cursor: "not-allowed",
+  },
+  pageNumbers: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
+  pageNumberButton: {
+    width: "38px",
+    height: "38px",
+    borderRadius: "10px",
+    border: "1px solid #6b4f3b",
+    backgroundColor: "#fff",
+    color: "#6b4f3b",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+  activePageNumberButton: {
+    backgroundColor: "#6b4f3b",
+    color: "#fff",
   },
 };
 
