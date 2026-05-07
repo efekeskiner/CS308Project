@@ -166,3 +166,21 @@ body {
 .bottom-text a:hover {
   text-decoration: underline;
 }
+
+.back-to-products-btn {
+  width: 100%;
+  margin: 12px 0 18px;
+  padding: 11px 16px;
+  border: 1px solid #6b4f3b;
+  border-radius: 10px;
+  background-color: #ffffff;
+  color: #6b4f3b;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-to-products-btn:hover {
+  background-color: #f8f4ee;
+}
