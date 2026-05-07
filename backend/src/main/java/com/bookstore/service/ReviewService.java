@@ -73,6 +73,12 @@ public class ReviewService {
         return new CommentDto(reviewRepository.save(review));
     }
 
+    public List<CommentDto> getProductReviews(Long productId) {
+        return reviewRepository.findByProductId(productId).stream()
+                .map(r -> new CommentDto(r, true))
+                .collect(Collectors.toList());
+    }
+
     public List<CommentDto> getApprovedComments(Long productId) {
         return reviewRepository
                 .findByProductIdAndContentIsNotNullAndContentApprovedTrue(productId)

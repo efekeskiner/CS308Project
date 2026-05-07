@@ -24,6 +24,11 @@ public class CommentController {
         this.reviewService = reviewService;
     }
 
+    @GetMapping("/api/products/{id}/reviews")
+    public ResponseEntity<List<CommentDto>> getProductReviews(@PathVariable Long id) {
+        return ResponseEntity.ok(reviewService.getProductReviews(id));
+    }
+
     @GetMapping("/api/products/{id}/comments")
     public ResponseEntity<List<CommentDto>> getApprovedComments(@PathVariable Long id) {
         return ResponseEntity.ok(reviewService.getApprovedComments(id));

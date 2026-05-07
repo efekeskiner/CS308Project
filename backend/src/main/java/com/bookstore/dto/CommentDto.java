@@ -27,7 +27,19 @@ public class CommentDto {
         this.createdAt = r.getCreatedAt();
     }
 
-    public Long getId() { return id; }
+    public CommentDto(Review r, boolean maskUnapprovedContent) {
+        this.id = r.getId();
+        this.userId = r.getUser().getId();
+        this.userName = r.getUser().getName();
+        this.productId = r.getProduct().getId();
+        this.productName = r.getProduct().getName();
+        this.score = r.getScore();
+        this.content = (!maskUnapprovedContent || Boolean.TRUE.equals(r.getContentApproved())) ? r.getContent() : null;
+        this.approved = r.getContentApproved();
+        this.createdAt = r.getCreatedAt();
+    }
+
+public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public String getUserName() { return userName; }
     public Long getProductId() { return productId; }

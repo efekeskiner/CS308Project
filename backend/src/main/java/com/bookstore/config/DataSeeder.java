@@ -1,12 +1,7 @@
 package com.bookstore.config;
 
-import com.bookstore.model.Category;
-import com.bookstore.model.Product;
-import com.bookstore.model.Role;
-import com.bookstore.model.User;
-import com.bookstore.repository.CategoryRepository;
-import com.bookstore.repository.ProductRepository;
-import com.bookstore.repository.UserRepository;
+import com.bookstore.model.*;
+import com.bookstore.repository.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -15,6 +10,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -22,20 +18,35 @@ public class DataSeeder implements CommandLineRunner {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
+    private final DeliveryRepository deliveryRepository;
+    private final InvoiceRepository invoiceRepository;
+    private final ReviewRepository reviewRepository;
 
     public DataSeeder(CategoryRepository categoryRepository,
                       ProductRepository productRepository,
-                      UserRepository userRepository) {
+                      UserRepository userRepository,
+                      OrderRepository orderRepository,
+                      DeliveryRepository deliveryRepository,
+                      InvoiceRepository invoiceRepository,
+                      ReviewRepository reviewRepository) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
+        this.orderRepository = orderRepository;
+        this.deliveryRepository = deliveryRepository;
+        this.invoiceRepository = invoiceRepository;
+        this.reviewRepository = reviewRepository;
     }
 
     @Override
     public void run(String... args) {
         seedCategoriesAndProducts();
         seedManagers();
+        seedCustomersAndOrders();
     }
+
+    // ── Products ─────────────────────────────────────────────────────────────
 
     private void seedCategoriesAndProducts() {
         if (productRepository.count() > 0) return;
@@ -195,7 +206,6 @@ public class DataSeeder implements CommandLineRunner {
                 null));
 
         // ---- Biography (6) ----
-        // Steve Jobs left at stock=0 intentionally — used by demo test plan as out-of-stock fixture.
         products.add(book("Steve Jobs", "Reprint", "9781451648539",
                 "Walter Isaacson's biography of the Apple co-founder.",
                 0, "20.00", "No warranty", "Simon & Schuster", cats.get("Biography"),
@@ -224,6 +234,8 @@ public class DataSeeder implements CommandLineRunner {
         productRepository.saveAll(products);
     }
 
+    // ── Managers ─────────────────────────────────────────────────────────────
+
     private void seedManagers() {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
@@ -246,6 +258,212 @@ public class DataSeeder implements CommandLineRunner {
             sm.setRole(Role.SALES_MANAGER);
             userRepository.save(sm);
         }
+    }
+
+    // ── Customers, Orders, Reviews ────────────────────────────────────────────
+
+    private void seedCustomersAndOrders() {
+        if (orderRepository.count() > 0) return;
+
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        Map<String, Product> p = productRepository.findAll().stream()
+                .collect(Collectors.toMap(Product::getName, x -> x, (a, b) -> a));
+
+        // ── Customers ────────────────────────────────────────────────────────
+        User alice = customer(encoder, "Alice Yılmaz",  "alice@demo.local",  "Atatürk Cad. No:12, Kadıköy, İstanbul");
+        User burak = customer(encoder, "Burak Demir",   "burak@demo.local",  "Bağcılar Mah. No:5, Ankara");
+        User ceren = customer(encoder, "Ceren Kaya",    "ceren@demo.local",  "Konak Sok. No:8, İzmir");
+        User deniz = customer(encoder, "Deniz Arslan",  "deniz@demo.local",  "Çankaya Cad. No:21, Ankara");
+        User elif  = customer(encoder, "Elif Şahin",    "elif@demo.local",   "Bornova Mah. No:3, İzmir");
+        User fatih = customer(encoder, "Fatih Öztürk",  "fatih@demo.local",  "Beşiktaş No:7, İstanbul");
+        User gizem = customer(encoder, "Gizem Çelik",   "gizem@demo.local",  "Karşıyaka Mah. No:15, İzmir");
+        User hakan = customer(encoder, "Hakan Aydın",   "hakan@demo.local",  "Mecidiyeköy No:9, İstanbul");
+
+        // ── Alice ─────────────────────────────────────────────────────────────
+        // DELIVERED: 1984 + Meditations
+        Order a1 = placeOrder(alice, alice.getHomeAddress(), OrderStatus.DELIVERED,
+                new Item(p.get("1984"), 1),
+                new Item(p.get("Meditations"), 1));
+        createDeliveries(a1, alice, true);
+        createInvoice(a1);
+
+        // PROCESSING: Dune
+        Order a2 = placeOrder(alice, alice.getHomeAddress(), OrderStatus.PROCESSING,
+                new Item(p.get("Dune"), 1));
+        createDeliveries(a2, alice, false);
+
+        // ── Burak ─────────────────────────────────────────────────────────────
+        // DELIVERED: Sapiens x2 + The Great Gatsby
+        Order b1 = placeOrder(burak, burak.getHomeAddress(), OrderStatus.DELIVERED,
+                new Item(p.get("Sapiens"), 2),
+                new Item(p.get("The Great Gatsby"), 1));
+        createDeliveries(b1, burak, true);
+        createInvoice(b1);
+
+        // IN_TRANSIT: Cosmos
+        Order b2 = placeOrder(burak, burak.getHomeAddress(), OrderStatus.IN_TRANSIT,
+                new Item(p.get("Cosmos"), 1));
+        createDeliveries(b2, burak, false);
+
+        // ── Ceren ─────────────────────────────────────────────────────────────
+        // DELIVERED: Pride and Prejudice + The Republic
+        Order c1 = placeOrder(ceren, ceren.getHomeAddress(), OrderStatus.DELIVERED,
+                new Item(p.get("Pride and Prejudice"), 1),
+                new Item(p.get("The Republic"), 1));
+        createDeliveries(c1, ceren, true);
+        createInvoice(c1);
+
+        // ── Deniz ─────────────────────────────────────────────────────────────
+        // DELIVERED: A Brief History of Time
+        Order d1 = placeOrder(deniz, deniz.getHomeAddress(), OrderStatus.DELIVERED,
+                new Item(p.get("A Brief History of Time"), 1));
+        createDeliveries(d1, deniz, true);
+        createInvoice(d1);
+
+        // PROCESSING: Beyond Good and Evil
+        Order d2 = placeOrder(deniz, deniz.getHomeAddress(), OrderStatus.PROCESSING,
+                new Item(p.get("Beyond Good and Evil"), 1));
+        createDeliveries(d2, deniz, false);
+
+        // ── Elif ──────────────────────────────────────────────────────────────
+        // DELIVERED: Guns, Germs, and Steel + Brave New World
+        Order e1 = placeOrder(elif, elif.getHomeAddress(), OrderStatus.DELIVERED,
+                new Item(p.get("Guns, Germs, and Steel"), 1),
+                new Item(p.get("Brave New World"), 1));
+        createDeliveries(e1, elif, true);
+        createInvoice(e1);
+
+        // ── Fatih ─────────────────────────────────────────────────────────────
+        // DELIVERED: To Kill a Mockingbird + One Hundred Years of Solitude
+        Order f1 = placeOrder(fatih, fatih.getHomeAddress(), OrderStatus.DELIVERED,
+                new Item(p.get("To Kill a Mockingbird"), 1),
+                new Item(p.get("One Hundred Years of Solitude"), 1));
+        createDeliveries(f1, fatih, true);
+        createInvoice(f1);
+
+        // IN_TRANSIT: The Catcher in the Rye
+        Order f2 = placeOrder(fatih, fatih.getHomeAddress(), OrderStatus.IN_TRANSIT,
+                new Item(p.get("The Catcher in the Rye"), 1));
+        createDeliveries(f2, fatih, false);
+
+        // ── Gizem ─────────────────────────────────────────────────────────────
+        // DELIVERED: The Selfish Gene
+        Order g1 = placeOrder(gizem, gizem.getHomeAddress(), OrderStatus.DELIVERED,
+                new Item(p.get("The Selfish Gene"), 1));
+        createDeliveries(g1, gizem, true);
+        createInvoice(g1);
+
+        // PROCESSING: The Silk Roads
+        Order g2 = placeOrder(gizem, gizem.getHomeAddress(), OrderStatus.PROCESSING,
+                new Item(p.get("The Silk Roads"), 1));
+        createDeliveries(g2, gizem, false);
+
+        // ── Hakan ─────────────────────────────────────────────────────────────
+        // DELIVERED: Crime and Punishment + The Prince
+        Order h1 = placeOrder(hakan, hakan.getHomeAddress(), OrderStatus.DELIVERED,
+                new Item(p.get("Crime and Punishment"), 1),
+                new Item(p.get("The Prince"), 1));
+        createDeliveries(h1, hakan, true);
+        createInvoice(h1);
+
+        // PROCESSING: Alexander Hamilton
+        Order h2 = placeOrder(hakan, hakan.getHomeAddress(), OrderStatus.PROCESSING,
+                new Item(p.get("Alexander Hamilton"), 1));
+        createDeliveries(h2, hakan, false);
+
+        // ── Reviews ──────────────────────────────────────────────────────────
+        // Alice reviewed from order a1 (DELIVERED)
+        review(alice, p.get("1984"),        8, "Chilling and relevant — Orwell's vision cuts deep.", true);
+        review(alice, p.get("Meditations"), 9, null, false); // rating only
+
+        // Burak reviewed from order b1 (DELIVERED)
+        review(burak, p.get("Sapiens"),           10, "Changed the way I see humanity's story.", true);
+        review(burak, p.get("The Great Gatsby"),   7, "Beautifully written, but hard to root for anyone.", false); // pending
+
+        // Ceren reviewed from order c1 (DELIVERED)
+        review(ceren, p.get("Pride and Prejudice"), 9, "Austen's wit never gets old.", true);
+        review(ceren, p.get("The Republic"),         6, null, false); // rating only
+
+        // Deniz reviewed from order d1 (DELIVERED)
+        review(deniz, p.get("A Brief History of Time"), 8, "Hawking makes the incomprehensible feel accessible.", false); // pending
+
+        // Elif reviewed from order e1 (DELIVERED)
+        review(elif, p.get("Guns, Germs, and Steel"), 9, "Every question I had about world history answered here.", true);
+        review(elif, p.get("Brave New World"),         7, "Huxley's dystopia feels uncomfortably close to home.", true);
+
+        // Fatih reviewed from order f1 (DELIVERED)
+        review(fatih, p.get("To Kill a Mockingbird"),          10, "A timeless story of courage and justice.", true);
+        review(fatih, p.get("One Hundred Years of Solitude"),   8, null, false); // rating only
+
+        // Gizem reviewed from order g1 (DELIVERED)
+        review(gizem, p.get("The Selfish Gene"), 7, "Dense but rewarding — Dawkins is a superb communicator.", false); // pending
+
+        // Hakan reviewed from order h1 (DELIVERED)
+        review(hakan, p.get("Crime and Punishment"), 9, "Raskolnikov's descent is one of literature's greatest portraits.", true);
+        review(hakan, p.get("The Prince"),            5, null, false); // rating only
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private static class Item {
+        final Product product;
+        final int quantity;
+        Item(Product p, int q) { product = p; quantity = q; }
+    }
+
+    private User customer(BCryptPasswordEncoder enc, String name, String email, String address) {
+        return userRepository.findByEmail(email).orElseGet(() -> {
+            User u = new User();
+            u.setName(name);
+            u.setEmail(email);
+            u.setPasswordHash(enc.encode("demo1234"));
+            u.setRole(Role.CUSTOMER);
+            u.setHomeAddress(address);
+            return userRepository.save(u);
+        });
+    }
+
+    private Order placeOrder(User user, String address, OrderStatus status, Item... items) {
+        Order order = new Order();
+        order.setUser(user);
+        order.setDeliveryAddress(address);
+        order.setStatus(status);
+
+        BigDecimal total = BigDecimal.ZERO;
+        for (Item spec : items) {
+            BigDecimal unitPrice = spec.product.getPrice();
+            OrderItem oi = new OrderItem();
+            oi.setProduct(spec.product);
+            oi.setQuantity(spec.quantity);
+            oi.setUnitPrice(unitPrice);
+            order.addItem(oi);
+            total = total.add(unitPrice.multiply(BigDecimal.valueOf(spec.quantity)));
+        }
+        order.setTotalPrice(total);
+        return orderRepository.save(order);
+    }
+
+    private void createDeliveries(Order order, User customer, boolean completed) {
+        for (OrderItem item : order.getItems()) {
+            Delivery d = new Delivery(customer, item.getProduct(), item.getQuantity(),
+                    item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())),
+                    order.getDeliveryAddress(), order);
+            d.setIsCompleted(completed);
+            deliveryRepository.save(d);
+        }
+    }
+
+    private void createInvoice(Order order) {
+        invoiceRepository.save(new Invoice(order, "./invoices/seed-placeholder.pdf"));
+    }
+
+    private void review(User user, Product product, int score, String content, boolean approved) {
+        Review r = new Review(user, product, score);
+        if (content != null) {
+            r.setContent(content);
+            r.setContentApproved(approved);
+        }
+        reviewRepository.save(r);
     }
 
     private Category saveCat(String name) {

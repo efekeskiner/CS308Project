@@ -12,6 +12,12 @@ function getAuthHeaders() {
   };
 }
 
+export async function getProductReviews(productId) {
+  const response = await fetch(`${API_URL}/products/${productId}/reviews`);
+  if (!response.ok) throw new Error("Failed to fetch reviews");
+  return response.json();
+}
+
 export async function getApprovedComments(productId) {
   const response = await fetch(`${API_URL}/products/${productId}/comments`);
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { addToCart } from "../services/cart";
 import { getProductById } from "../services/products";
-import { getApprovedComments, submitComment } from "../services/comments";
+import { getProductReviews, submitComment } from "../services/comments";
 import { getProductRating, submitRating } from "../services/ratings";
 import { getCurrentUser } from "../services/auth";
 import { getMyOrders } from "../services/orders";
@@ -57,7 +57,7 @@ function ProductDetailPage() {
         setProduct(productData);
 
         try {
-          const commentsData = await getApprovedComments(id);
+          const commentsData = await getProductReviews(id);
           setComments(Array.isArray(commentsData) ? commentsData : commentsData.content || []);
         } catch (commentError) {
           console.error(commentError);
@@ -213,10 +213,10 @@ function ProductDetailPage() {
       </div>
 
       <section className="comments-section">
-        <h2>Approved Comments</h2>
+        <h2>Reviews</h2>
 
         {comments.length === 0 ? (
-          <p className="muted-text">No approved comments yet.</p>
+          <p className="muted-text">No reviews yet.</p>
         ) : (
           comments.map((comment) => (
             <div key={comment.id} className="comment-card">
@@ -230,7 +230,7 @@ function ProductDetailPage() {
                   <span className="comment-rating-number">{comment.score}/10</span>
                 </div>
               )}
-              <p>{comment.content}</p>
+              {comment.content && <p>{comment.content}</p>}
             </div>
           ))
         )}
