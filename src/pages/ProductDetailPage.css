@@ -35,9 +35,14 @@
 
 .product-detail-image {
   width: 100%;
-  max-height: 460px;
-  object-fit: cover;
+  max-height: 500px;
+  object-fit: contain;
+  object-position: center;
+  background-color: #ffffff;
+  border: 1px solid #eee5dc;
   border-radius: 14px;
+  padding: 12px;
+  box-sizing: border-box;
 }
 
 .product-info-section h1 {

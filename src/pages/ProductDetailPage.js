@@ -148,7 +148,19 @@ function ProductDetailPage() {
   const averageRating =
     ratingInfo?.averageRating ?? product.averageRating ?? "No rating yet";
   const ratingCount = ratingInfo?.ratingCount ?? product.ratingCount;
-  const imageSrc = product.imageUrl || FALLBACK_IMAGE;
+  const getBookImage = (product) => {
+    if (product.imageUrl) {
+      return product.imageUrl;
+    }
+
+    if (product.serialNumber) {
+      return `https://covers.openlibrary.org/b/isbn/${product.serialNumber}-L.jpg`;
+    }
+
+    return FALLBACK_IMAGE;
+  };
+
+  const imageSrc = getBookImage(product);
 
   return (
     <div className="product-detail-page">
