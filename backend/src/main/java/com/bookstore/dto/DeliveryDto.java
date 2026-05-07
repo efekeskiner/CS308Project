@@ -14,6 +14,7 @@ public class DeliveryDto {
     private final Integer quantity;
     private final BigDecimal totalPrice;
     private final String deliveryAddress;
+    private final boolean isInTransit;
     private final boolean isCompleted;
     private final Long orderId;
     private final OrderStatus orderStatus;
@@ -27,6 +28,7 @@ public class DeliveryDto {
         this.quantity = d.getQuantity();
         this.totalPrice = d.getTotalPrice();
         this.deliveryAddress = d.getDeliveryAddress();
+        this.isInTransit = Boolean.TRUE.equals(d.getIsInTransit());
         this.isCompleted = Boolean.TRUE.equals(d.getIsCompleted());
         this.orderId = d.getOrder() != null ? d.getOrder().getId() : null;
         this.orderStatus = d.getOrder() != null ? d.getOrder().getStatus() : null;
@@ -40,6 +42,7 @@ public class DeliveryDto {
     public Integer getQuantity() { return quantity; }
     public BigDecimal getTotalPrice() { return totalPrice; }
     public String getDeliveryAddress() { return deliveryAddress; }
+    public boolean getIsInTransit() { return isInTransit; }
     public boolean getIsCompleted() { return isCompleted; }
     public Long getOrderId() { return orderId; }
     public OrderStatus getOrderStatus() { return orderStatus; }

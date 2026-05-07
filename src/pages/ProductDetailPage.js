@@ -38,12 +38,10 @@ function ProductDetailPage() {
     isLoggedIn &&
     isCustomer &&
     orderList.some((order) => {
-      const status = String(order.status || "").toUpperCase();
-      const items = order.items || [];
-
-      return (
-        status === "DELIVERED" &&
-        items.some((item) => Number(item.productId) === Number(id))
+      const matchingItem = (order.items || []).find((item) => Number(item.productId) === Number(id));
+      if (!matchingItem) return false;
+      return (order.deliveries || []).some(
+        (d) => d.isCompleted && d.productName === matchingItem.productName
       );
     });
 

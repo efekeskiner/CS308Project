@@ -35,4 +35,6 @@ public class Invoice {
     public Order getOrder() { return order; }
     public String getPdfPath() { return pdfPath; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+
+    public void setPdfPath(String pdfPath) { this.pdfPath = pdfPath; }
 }

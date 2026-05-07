@@ -1,5 +1,6 @@
 package com.bookstore.dto;
 
+import com.bookstore.model.Delivery;
 import com.bookstore.model.Order;
 import com.bookstore.model.OrderStatus;
 
@@ -18,12 +19,17 @@ public class OrderDto {
     private final String deliveryAddress;
     private final List<OrderItemDto> items;
     private final Long invoiceId;
+    private final List<DeliveryStatusDto> deliveries;
 
     public OrderDto(Order order) {
-        this(order, null);
+        this(order, null, List.of());
     }
 
     public OrderDto(Order order, Long invoiceId) {
+        this(order, invoiceId, List.of());
+    }
+
+    public OrderDto(Order order, Long invoiceId, List<Delivery> deliveries) {
         this.id = order.getId();
         this.status = order.getStatus();
         this.totalPrice = order.getTotalPrice();
@@ -34,6 +40,8 @@ public class OrderDto {
         this.items = order.getItems() == null ? List.of()
                 : order.getItems().stream().map(OrderItemDto::new).collect(Collectors.toList());
         this.invoiceId = invoiceId;
+        this.deliveries = deliveries == null ? List.of()
+                : deliveries.stream().map(DeliveryStatusDto::new).collect(Collectors.toList());
     }
 
     public Long getId() { return id; }
@@ -45,4 +53,24 @@ public class OrderDto {
     public String getDeliveryAddress() { return deliveryAddress; }
     public List<OrderItemDto> getItems() { return items; }
     public Long getInvoiceId() { return invoiceId; }
+    public List<DeliveryStatusDto> getDeliveries() { return deliveries; }
+
+    public static class DeliveryStatusDto {
+        private final String productName;
+        private final Integer quantity;
+        private final boolean isInTransit;
+        private final boolean isCompleted;
+
+        public DeliveryStatusDto(Delivery d) {
+            this.productName = d.getProduct() != null ? d.getProduct().getName() : null;
+            this.quantity = d.getQuantity();
+            this.isInTransit = Boolean.TRUE.equals(d.getIsInTransit());
+            this.isCompleted = Boolean.TRUE.equals(d.getIsCompleted());
+        }
+
+        public String getProductName() { return productName; }
+        public Integer getQuantity() { return quantity; }
+        public boolean getIsInTransit() { return isInTransit; }
+        public boolean getIsCompleted() { return isCompleted; }
+    }
 }

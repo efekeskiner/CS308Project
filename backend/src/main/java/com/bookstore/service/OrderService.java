@@ -137,7 +137,7 @@ public class OrderService {
                 .orElseThrow(() -> new NoSuchElementException("Order " + orderId + " not found"));
         assertCanView(order, user);
         Long invoiceId = invoiceRepository.findByOrderId(order.getId()).map(Invoice::getId).orElse(null);
-        return new OrderDto(order, invoiceId);
+        return new OrderDto(order, invoiceId, deliveryRepository.findByOrderId(order.getId()));
     }
 
     @Transactional(readOnly = true)
@@ -153,7 +153,7 @@ public class OrderService {
         }
         return orders.map(o -> {
             Long invoiceId = invoiceRepository.findByOrderId(o.getId()).map(Invoice::getId).orElse(null);
-            return new OrderDto(o, invoiceId);
+            return new OrderDto(o, invoiceId, deliveryRepository.findByOrderId(o.getId()));
         });
     }
 

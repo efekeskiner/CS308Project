@@ -10,4 +10,5 @@ import java.util.List;
 public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     List<Delivery> findByOrderId(Long orderId);
     Page<Delivery> findAllByOrderByIdDesc(Pageable pageable);
+    boolean existsByCustomerIdAndProductIdAndIsCompletedTrue(Long customerId, Long productId);
 }

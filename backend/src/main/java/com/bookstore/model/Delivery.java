@@ -29,6 +29,9 @@ public class Delivery {
     @Column(name = "delivery_address", columnDefinition = "TEXT")
     private String deliveryAddress;
 
+    @Column(name = "is_in_transit", nullable = false)
+    private Boolean isInTransit = false;
+
     @Column(name = "is_completed", nullable = false)
     private Boolean isCompleted = false;
 
@@ -55,6 +58,7 @@ public class Delivery {
     public Integer getQuantity() { return quantity; }
     public BigDecimal getTotalPrice() { return totalPrice; }
     public String getDeliveryAddress() { return deliveryAddress; }
+    public Boolean getIsInTransit() { return isInTransit; }
     public Boolean getIsCompleted() { return isCompleted; }
     public Order getOrder() { return order; }
 
@@ -63,6 +67,7 @@ public class Delivery {
     public void setQuantity(Integer quantity) { this.quantity = quantity; }
     public void setTotalPrice(BigDecimal totalPrice) { this.totalPrice = totalPrice; }
     public void setDeliveryAddress(String deliveryAddress) { this.deliveryAddress = deliveryAddress; }
+    public void setIsInTransit(Boolean isInTransit) { this.isInTransit = isInTransit; }
     public void setIsCompleted(Boolean isCompleted) { this.isCompleted = isCompleted; }
     public void setOrder(Order order) { this.order = order; }
 }

@@ -52,10 +52,14 @@ public class DeliveryService {
         }
 
         if (newStatus == OrderStatus.IN_TRANSIT) {
-            if (order.getStatus() == OrderStatus.DELIVERED) {
-                throw new IllegalStateException("Order is already delivered");
+            if (order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.CANCELLED) {
+                throw new IllegalStateException("Cannot mark a delivery in-transit for a " + order.getStatus() + " order");
             }
-            // Advance order-level status; individual delivery isCompleted flags are unchanged
+            if (Boolean.TRUE.equals(delivery.getIsCompleted())) {
+                throw new IllegalStateException("Delivery " + deliveryId + " is already delivered");
+            }
+            delivery.setIsInTransit(true);
+            deliveryRepository.save(delivery);
             if (order.getStatus() == OrderStatus.PROCESSING) {
                 order.setStatus(OrderStatus.IN_TRANSIT);
                 orderRepository.save(order);
@@ -65,6 +69,7 @@ public class DeliveryService {
                 throw new IllegalStateException("Delivery " + deliveryId + " is already marked as delivered");
             }
             // Mark only this specific delivery as completed
+            delivery.setIsInTransit(true);
             delivery.setIsCompleted(true);
             deliveryRepository.save(delivery);
 

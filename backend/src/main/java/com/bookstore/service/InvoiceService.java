@@ -48,12 +48,14 @@ public class InvoiceService {
             throw new RuntimeException("Failed to create invoice storage directory: " + dir, e);
         }
 
-        String fileName = "invoice-" + order.getId() + ".pdf";
+        Invoice invoice = invoiceRepository.save(new Invoice(order, null));
+
+        String fileName = "invoice-" + invoice.getId() + ".pdf";
         String filePath = storagePath + File.separator + fileName;
 
-        generatePdf(order, user, filePath);
+        generatePdf(invoice.getId(), order, user, filePath);
 
-        Invoice invoice = new Invoice(order, filePath);
+        invoice.setPdfPath(filePath);
         return invoiceRepository.save(invoice);
     }
 
@@ -86,7 +88,7 @@ public class InvoiceService {
                 .collect(Collectors.toList());
     }
 
-    private void generatePdf(Order order, User user, String filePath) {
+    private void generatePdf(Long invoiceId, Order order, User user, String filePath) {
         Document doc = new Document(PageSize.A4, 50, 50, 60, 60);
         try {
             PdfWriter.getInstance(doc, new FileOutputStream(filePath));
@@ -113,7 +115,7 @@ public class InvoiceService {
             DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
             String dateStr = order.getCreatedAt() != null ? order.getCreatedAt().format(dtf) : "N/A";
 
-            doc.add(new Paragraph("Invoice #: " + order.getId(), sectionFont));
+            doc.add(new Paragraph("Invoice #: " + invoiceId, sectionFont));
             doc.add(new Paragraph("Order #: " + order.getId(), normalFont));
             doc.add(new Paragraph("Date: " + dateStr, normalFont));
             doc.add(new Paragraph(" "));

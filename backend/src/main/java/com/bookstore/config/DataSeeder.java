@@ -284,53 +284,53 @@ public class DataSeeder implements CommandLineRunner {
         Order a1 = placeOrder(alice, alice.getHomeAddress(), OrderStatus.DELIVERED,
                 new Item(p.get("1984"), 1),
                 new Item(p.get("Meditations"), 1));
-        createDeliveries(a1, alice, true);
+        createDeliveries(a1, alice, false, true);
         createInvoice(a1);
 
         // PROCESSING: Dune
         Order a2 = placeOrder(alice, alice.getHomeAddress(), OrderStatus.PROCESSING,
                 new Item(p.get("Dune"), 1));
-        createDeliveries(a2, alice, false);
+        createDeliveries(a2, alice, false, false);
 
         // ── Burak ─────────────────────────────────────────────────────────────
         // DELIVERED: Sapiens x2 + The Great Gatsby
         Order b1 = placeOrder(burak, burak.getHomeAddress(), OrderStatus.DELIVERED,
                 new Item(p.get("Sapiens"), 2),
                 new Item(p.get("The Great Gatsby"), 1));
-        createDeliveries(b1, burak, true);
+        createDeliveries(b1, burak, false, true);
         createInvoice(b1);
 
         // IN_TRANSIT: Cosmos
         Order b2 = placeOrder(burak, burak.getHomeAddress(), OrderStatus.IN_TRANSIT,
                 new Item(p.get("Cosmos"), 1));
-        createDeliveries(b2, burak, false);
+        createDeliveries(b2, burak, true, false);
 
         // ── Ceren ─────────────────────────────────────────────────────────────
         // DELIVERED: Pride and Prejudice + The Republic
         Order c1 = placeOrder(ceren, ceren.getHomeAddress(), OrderStatus.DELIVERED,
                 new Item(p.get("Pride and Prejudice"), 1),
                 new Item(p.get("The Republic"), 1));
-        createDeliveries(c1, ceren, true);
+        createDeliveries(c1, ceren, false, true);
         createInvoice(c1);
 
         // ── Deniz ─────────────────────────────────────────────────────────────
         // DELIVERED: A Brief History of Time
         Order d1 = placeOrder(deniz, deniz.getHomeAddress(), OrderStatus.DELIVERED,
                 new Item(p.get("A Brief History of Time"), 1));
-        createDeliveries(d1, deniz, true);
+        createDeliveries(d1, deniz, false, true);
         createInvoice(d1);
 
         // PROCESSING: Beyond Good and Evil
         Order d2 = placeOrder(deniz, deniz.getHomeAddress(), OrderStatus.PROCESSING,
                 new Item(p.get("Beyond Good and Evil"), 1));
-        createDeliveries(d2, deniz, false);
+        createDeliveries(d2, deniz, false, false);
 
         // ── Elif ──────────────────────────────────────────────────────────────
         // DELIVERED: Guns, Germs, and Steel + Brave New World
         Order e1 = placeOrder(elif, elif.getHomeAddress(), OrderStatus.DELIVERED,
                 new Item(p.get("Guns, Germs, and Steel"), 1),
                 new Item(p.get("Brave New World"), 1));
-        createDeliveries(e1, elif, true);
+        createDeliveries(e1, elif, false, true);
         createInvoice(e1);
 
         // ── Fatih ─────────────────────────────────────────────────────────────
@@ -338,38 +338,38 @@ public class DataSeeder implements CommandLineRunner {
         Order f1 = placeOrder(fatih, fatih.getHomeAddress(), OrderStatus.DELIVERED,
                 new Item(p.get("To Kill a Mockingbird"), 1),
                 new Item(p.get("One Hundred Years of Solitude"), 1));
-        createDeliveries(f1, fatih, true);
+        createDeliveries(f1, fatih, false, true);
         createInvoice(f1);
 
         // IN_TRANSIT: The Catcher in the Rye
         Order f2 = placeOrder(fatih, fatih.getHomeAddress(), OrderStatus.IN_TRANSIT,
                 new Item(p.get("The Catcher in the Rye"), 1));
-        createDeliveries(f2, fatih, false);
+        createDeliveries(f2, fatih, true, false);
 
         // ── Gizem ─────────────────────────────────────────────────────────────
         // DELIVERED: The Selfish Gene
         Order g1 = placeOrder(gizem, gizem.getHomeAddress(), OrderStatus.DELIVERED,
                 new Item(p.get("The Selfish Gene"), 1));
-        createDeliveries(g1, gizem, true);
+        createDeliveries(g1, gizem, false, true);
         createInvoice(g1);
 
         // PROCESSING: The Silk Roads
         Order g2 = placeOrder(gizem, gizem.getHomeAddress(), OrderStatus.PROCESSING,
                 new Item(p.get("The Silk Roads"), 1));
-        createDeliveries(g2, gizem, false);
+        createDeliveries(g2, gizem, false, false);
 
         // ── Hakan ─────────────────────────────────────────────────────────────
         // DELIVERED: Crime and Punishment + The Prince
         Order h1 = placeOrder(hakan, hakan.getHomeAddress(), OrderStatus.DELIVERED,
                 new Item(p.get("Crime and Punishment"), 1),
                 new Item(p.get("The Prince"), 1));
-        createDeliveries(h1, hakan, true);
+        createDeliveries(h1, hakan, false, true);
         createInvoice(h1);
 
         // PROCESSING: Alexander Hamilton
         Order h2 = placeOrder(hakan, hakan.getHomeAddress(), OrderStatus.PROCESSING,
                 new Item(p.get("Alexander Hamilton"), 1));
-        createDeliveries(h2, hakan, false);
+        createDeliveries(h2, hakan, false, false);
 
         // ── Reviews ──────────────────────────────────────────────────────────
         // Alice reviewed from order a1 (DELIVERED)
@@ -443,11 +443,12 @@ public class DataSeeder implements CommandLineRunner {
         return orderRepository.save(order);
     }
 
-    private void createDeliveries(Order order, User customer, boolean completed) {
+    private void createDeliveries(Order order, User customer, boolean inTransit, boolean completed) {
         for (OrderItem item : order.getItems()) {
             Delivery d = new Delivery(customer, item.getProduct(), item.getQuantity(),
                     item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())),
                     order.getDeliveryAddress(), order);
+            d.setIsInTransit(inTransit || completed);
             d.setIsCompleted(completed);
             deliveryRepository.save(d);
         }

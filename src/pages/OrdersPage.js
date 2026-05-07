@@ -108,13 +108,25 @@ export default function OrdersPage() {
 
               {expanded === order.id && (
                 <div style={styles.itemsList}>
-                  {order.items?.map((item) => (
-                    <div key={item.id} style={styles.itemRow}>
-                      <span>{item.productName}</span>
-                      <span style={{ color: "#555" }}>× {item.quantity}</span>
-                      <span style={{ fontWeight: 600 }}>₺{(item.unitPrice * item.quantity).toFixed(2)}</span>
-                    </div>
-                  ))}
+                  {order.items?.map((item) => {
+                    const delivery = order.deliveries?.find((d) => d.productName === item.productName);
+                    const dStatus = delivery
+                      ? delivery.isCompleted ? "DELIVERED" : delivery.isInTransit ? "IN_TRANSIT" : "PROCESSING"
+                      : null;
+                    const dColors = dStatus ? STATUS_COLORS[dStatus] : null;
+                    return (
+                      <div key={item.id} style={styles.itemRow}>
+                        <span>{item.productName}</span>
+                        <span style={{ color: "#555" }}>× {item.quantity}</span>
+                        <span style={{ fontWeight: 600 }}>₺{(item.unitPrice * item.quantity).toFixed(2)}</span>
+                        {dColors && (
+                          <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, backgroundColor: dColors.bg, color: dColors.color, border: `1px solid ${dColors.border}`, marginLeft: 4 }}>
+                            {dStatus.replace("_", " ")}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                   <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
                     {order.invoiceId && (
                       <button style={styles.linkBtn} onClick={() => downloadInvoicePdf(order.invoiceId, order.id)}>

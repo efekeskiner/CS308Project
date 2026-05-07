@@ -25,13 +25,16 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
+    private final com.bookstore.repository.DeliveryRepository deliveryRepository;
 
     public ReviewService(ReviewRepository reviewRepository,
                          ProductRepository productRepository,
-                         OrderRepository orderRepository) {
+                         OrderRepository orderRepository,
+                         com.bookstore.repository.DeliveryRepository deliveryRepository) {
         this.reviewRepository = reviewRepository;
         this.productRepository = productRepository;
         this.orderRepository = orderRepository;
+        this.deliveryRepository = deliveryRepository;
     }
 
     public RatingDto getRating(Long productId) {
@@ -45,7 +48,7 @@ public class ReviewService {
         if (req.getScore() == null || req.getScore() < 1 || req.getScore() > 10) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Score must be between 1 and 10");
         }
-        if (!orderRepository.existsDeliveredOrderForUserAndProduct(user.getId(), productId)) {
+        if (!deliveryRepository.existsByCustomerIdAndProductIdAndIsCompletedTrue(user.getId(), productId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "You can only rate a product after it has been delivered to you");
         }
