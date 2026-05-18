@@ -4,6 +4,14 @@ import { authFetch } from "../services/auth";
 import { downloadInvoicePdf } from "../services/invoices";
 
 const BASE_URL = "http://localhost:8080/api";
+const REFUND_WINDOW_DAYS = 30;
+
+function isWithinRefundWindow(createdAt) {
+  if (!createdAt) return false;
+  const orderDate = new Date(createdAt);
+  const diffDays = (Date.now() - orderDate.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays <= REFUND_WINDOW_DAYS;
+}
 
 const STATUS_COLORS = {
   PROCESSING: { bg: "#fff4e5", color: "#8a5a00", border: "#ffd7a8" },
@@ -27,6 +35,7 @@ export default function OrdersPage() {
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState(null);
   const [cancelling, setCancelling] = useState(null);
+  const [placeholderMessage, setPlaceholderMessage] = useState("");
   const navigate = useNavigate();
 
   const fetchOrders = () => {
@@ -39,6 +48,10 @@ export default function OrdersPage() {
   };
 
   useEffect(() => { fetchOrders(); }, []);
+
+  const handleRefundPlaceholder = () => {
+    setPlaceholderMessage("Refund request feature will be connected to backend soon.");
+  };
 
   const handleCancel = async (orderId) => {
     if (!window.confirm("Cancel this order?")) return;
@@ -63,6 +76,20 @@ export default function OrdersPage() {
         </div>
         <button style={styles.btn} onClick={() => navigate("/products")}>Continue Shopping</button>
       </div>
+
+      {placeholderMessage && (
+        <div style={styles.placeholderToast}>
+          <span>{placeholderMessage}</span>
+          <button
+            type="button"
+            style={styles.toastClose}
+            onClick={() => setPlaceholderMessage("")}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {orders.length === 0 ? (
         <div style={styles.empty}>
@@ -127,7 +154,7 @@ export default function OrdersPage() {
                       </div>
                     );
                   })}
-                  <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+                  <div style={styles.actionRow}>
                     {order.invoiceId && (
                       <button style={styles.linkBtn} onClick={() => downloadInvoicePdf(order.invoiceId, order.id)}>
                         📄 Invoice PDF
@@ -137,6 +164,22 @@ export default function OrdersPage() {
                       <button style={styles.cancelBtn} disabled={cancelling === order.id} onClick={() => handleCancel(order.id)}>
                         {cancelling === order.id ? "Cancelling..." : "Cancel Order"}
                       </button>
+                    )}
+                    {order.status === "DELIVERED" && (
+                      isWithinRefundWindow(order.createdAt) ? (
+                        <>
+                          <span style={styles.refundEligible}>Eligible for Refund</span>
+                          <button
+                            type="button"
+                            style={styles.refundBtn}
+                            onClick={handleRefundPlaceholder}
+                          >
+                            Request Refund
+                          </button>
+                        </>
+                      ) : (
+                        <span style={styles.refundExpired}>Refund Window Expired</span>
+                      )
                     )}
                   </div>
                 </div>
@@ -171,5 +214,11 @@ const styles = {
   itemRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #f9f4f0", fontSize: 14, gap: 8 },
   linkBtn: { backgroundColor: "#4b2e2e", color: "white", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, cursor: "pointer", textDecoration: "none", display: "inline-block" },
   cancelBtn: { backgroundColor: "#dc2626", color: "white", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, cursor: "pointer" },
+  actionRow: { display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" },
+  refundEligible: { padding: "4px 12px", borderRadius: "999px", fontSize: 12, fontWeight: 600, backgroundColor: "#e7f6ec", color: "#1b7f3a", border: "1px solid #bfe6cb" },
+  refundExpired: { padding: "4px 12px", borderRadius: "999px", fontSize: 12, fontWeight: 600, backgroundColor: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" },
+  refundBtn: { backgroundColor: "#6b4f3b", color: "white", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontWeight: 600 },
+  placeholderToast: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, padding: "10px 14px", borderRadius: 10, fontSize: 14, color: "#4b2e2e", backgroundColor: "#f8f4ee", border: "1px solid #d1c7bc" },
+  toastClose: { border: "none", background: "none", fontSize: 18, lineHeight: 1, color: "#6b5b53", cursor: "pointer", padding: 0 },
   center: { textAlign: "center", padding: 60, fontSize: 18, color: "#6b5b53" },
 };
