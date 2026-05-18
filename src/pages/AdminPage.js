@@ -363,6 +363,10 @@ function RevenuePanel() {
     authFetch(`${BASE_URL}/analytics/revenue?startDate=${startDate}&endDate=${endDate}`).then((r) => r.json()).then(setData).finally(() => setLoading(false));
   };
 
+  const totalRevenue = data?.totalRevenue ?? 0;
+  const totalCost = data?.totalCost ?? 0;
+  const netProfit = data?.netProfit ?? data?.profit ?? 0;
+
   return (
     <div>
       <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", alignItems: "flex-end" }}>
@@ -375,9 +379,9 @@ function RevenuePanel() {
         <div>
           <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
             {[
-              { label: "Total Revenue", value: `₺${Number(data.totalRevenue).toFixed(2)}`, color: "#16a34a" },
-              { label: "Total Cost", value: `₺${Number(data.totalCost).toFixed(2)}`, color: "#dc2626" },
-              { label: "Net Profit", value: `₺${Number(data.profit).toFixed(2)}`, color: data.profit >= 0 ? "#2563eb" : "#dc2626" },
+              { label: "Total Revenue", value: `₺${Number(totalRevenue).toFixed(2)}`, color: "#16a34a" },
+              { label: "Total Cost", value: `₺${Number(totalCost).toFixed(2)}`, color: "#dc2626" },
+              { label: "Net Profit", value: `₺${Number(netProfit).toFixed(2)}`, color: netProfit >= 0 ? "#2563eb" : "#dc2626" },
             ].map((s) => (
               <div key={s.label} style={{ ...styles.statCard, color: s.color }}>
                 <p style={{ margin: 0, fontSize: 13, color: "#777" }}>{s.label}</p>
