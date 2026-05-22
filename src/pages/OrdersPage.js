@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch } from "../services/auth";
 import { downloadInvoicePdf } from "../services/invoices";
+import { getMyRefunds, requestRefund } from "../services/refunds";
 
 const BASE_URL = "http://localhost:8080/api";
 const REFUND_WINDOW_DAYS = 30;
@@ -35,7 +36,11 @@ export default function OrdersPage() {
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState(null);
   const [cancelling, setCancelling] = useState(null);
-  const [placeholderMessage, setPlaceholderMessage] = useState("");
+  const [refundMap, setRefundMap] = useState({});
+  const [refundModalItem, setRefundModalItem] = useState(null);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
   const fetchOrders = () => {
@@ -47,10 +52,51 @@ export default function OrdersPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  const fetchRefunds = async () => {
+    try {
+      const data = await getMyRefunds();
+      const map = {};
+      (Array.isArray(data) ? data : []).forEach((refund) => {
+        map[refund.orderItemId] = refund;
+      });
+      setRefundMap(map);
+    } catch {
+      setRefundMap({});
+    }
+  };
 
-  const handleRefundPlaceholder = () => {
-    setPlaceholderMessage("Refund request feature will be connected to backend soon.");
+  useEffect(() => {
+    fetchOrders();
+    fetchRefunds();
+  }, []);
+
+  const openRefundModal = (order, item) => {
+    setRefundModalItem({ order, item });
+    setRefundReason("");
+    setMessage("");
+  };
+
+  const closeRefundModal = () => {
+    setRefundModalItem(null);
+    setRefundReason("");
+    setRefundSubmitting(false);
+  };
+
+  const submitRefundRequest = async () => {
+    if (!refundModalItem?.item?.id) return;
+
+    setRefundSubmitting(true);
+    try {
+      await requestRefund(refundModalItem.item.id, refundReason);
+      await fetchRefunds();
+      fetchOrders();
+      closeRefundModal();
+      setMessage("Refund request submitted successfully.");
+    } catch (err) {
+      setMessage(err.message || "Could not submit refund request.");
+    } finally {
+      setRefundSubmitting(false);
+    }
   };
 
   const handleCancel = async (orderId) => {
@@ -77,13 +123,13 @@ export default function OrdersPage() {
         <button style={styles.btn} onClick={() => navigate("/products")}>Continue Shopping</button>
       </div>
 
-      {placeholderMessage && (
+      {message && (
         <div style={styles.placeholderToast}>
-          <span>{placeholderMessage}</span>
+          <span>{message}</span>
           <button
             type="button"
             style={styles.toastClose}
-            onClick={() => setPlaceholderMessage("")}
+            onClick={() => setMessage("")}
             aria-label="Dismiss"
           >
             ×
@@ -141,6 +187,7 @@ export default function OrdersPage() {
                       ? delivery.isCompleted ? "DELIVERED" : delivery.isInTransit ? "IN_TRANSIT" : "PROCESSING"
                       : null;
                     const dColors = dStatus ? STATUS_COLORS[dStatus] : null;
+                    const refund = refundMap[item.id];
                     return (
                       <div key={item.id} style={styles.itemRow}>
                         <span>{item.productName}</span>
@@ -150,6 +197,23 @@ export default function OrdersPage() {
                           <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, backgroundColor: dColors.bg, color: dColors.color, border: `1px solid ${dColors.border}`, marginLeft: 4 }}>
                             {dStatus.replace("_", " ")}
                           </span>
+                        )}
+                        {order.status === "DELIVERED" && (
+                          refund ? (
+                            <span style={styles.refundStatusPill}>
+                              Refund {refund.status?.toLowerCase()}
+                            </span>
+                          ) : isWithinRefundWindow(order.createdAt) ? (
+                            <button
+                              type="button"
+                              style={styles.refundBtn}
+                              onClick={() => openRefundModal(order, item)}
+                            >
+                              Request Refund
+                            </button>
+                          ) : (
+                            <span style={styles.refundExpired}>Refund Window Expired</span>
+                          )
                         )}
                       </div>
                     );
@@ -165,27 +229,46 @@ export default function OrdersPage() {
                         {cancelling === order.id ? "Cancelling..." : "Cancel Order"}
                       </button>
                     )}
-                    {order.status === "DELIVERED" && (
-                      isWithinRefundWindow(order.createdAt) ? (
-                        <>
-                          <span style={styles.refundEligible}>Eligible for Refund</span>
-                          <button
-                            type="button"
-                            style={styles.refundBtn}
-                            onClick={handleRefundPlaceholder}
-                          >
-                            Request Refund
-                          </button>
-                        </>
-                      ) : (
-                        <span style={styles.refundExpired}>Refund Window Expired</span>
-                      )
-                    )}
                   </div>
                 </div>
               )}
             </div>
           ))}
+        </div>
+      )}
+      {refundModalItem && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h2 style={styles.modalTitle}>Request Refund</h2>
+            <p style={styles.modalText}>
+              Product: <strong>{refundModalItem.item.productName}</strong>
+            </p>
+            <p style={styles.modalText}>
+              Quantity: {refundModalItem.item.quantity}
+            </p>
+
+            <label style={styles.label}>Reason optional</label>
+            <textarea
+              style={styles.textarea}
+              value={refundReason}
+              onChange={(e) => setRefundReason(e.target.value)}
+              placeholder="Example: Damaged on arrival"
+              rows={4}
+            />
+
+            <div style={styles.modalActions}>
+              <button style={styles.secondaryBtn} onClick={closeRefundModal}>
+                Cancel
+              </button>
+              <button
+                style={styles.refundBtn}
+                onClick={submitRefundRequest}
+                disabled={refundSubmitting}
+              >
+                {refundSubmitting ? "Submitting..." : "Confirm Refund Request"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -221,4 +304,71 @@ const styles = {
   placeholderToast: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, padding: "10px 14px", borderRadius: 10, fontSize: 14, color: "#4b2e2e", backgroundColor: "#f8f4ee", border: "1px solid #d1c7bc" },
   toastClose: { border: "none", background: "none", fontSize: 18, lineHeight: 1, color: "#6b5b53", cursor: "pointer", padding: 0 },
   center: { textAlign: "center", padding: 60, fontSize: 18, color: "#6b5b53" },
+  refundStatusPill: {
+    padding: "4px 12px",
+    borderRadius: "999px",
+    fontSize: 12,
+    fontWeight: 600,
+    backgroundColor: "#eff6ff",
+    color: "#1e40af",
+    border: "1px solid #bfdbfe",
+  },
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  },
+  modal: {
+    width: "420px",
+    maxWidth: "90vw",
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 24,
+    boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+  },
+  modalTitle: {
+    margin: "0 0 12px",
+    color: "#4b2e2e",
+  },
+  modalText: {
+    margin: "6px 0",
+    color: "#555",
+  },
+  label: {
+    display: "block",
+    marginTop: 14,
+    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#4b2e2e",
+  },
+  textarea: {
+    width: "100%",
+    border: "1px solid #d1c7bc",
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 14,
+    resize: "vertical",
+    boxSizing: "border-box",
+  },
+  modalActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 16,
+  },
+  secondaryBtn: {
+    backgroundColor: "#f3ece3",
+    color: "#4b2e2e",
+    border: "1px solid #d1c7bc",
+    borderRadius: 8,
+    padding: "8px 14px",
+    fontSize: 13,
+    cursor: "pointer",
+    fontWeight: 600,
+  },
 };
