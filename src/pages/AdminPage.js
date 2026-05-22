@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch, getCurrentUser } from "../services/auth";
+import { listPendingRefunds, approveRefund, rejectRefund } from "../services/refunds";
 
 const BASE_URL = "http://localhost:8080/api";
 
@@ -61,12 +62,14 @@ function CommentsPanel() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetch_(); }, []);
-
   const action = async (id, approve) => {
-    await authFetch(`${BASE_URL}/comments/${id}/${approve ? "approve" : "reject"}`, { method: "PUT" });
+    await authFetch(`${BASE_URL}/comments/${id}/${approve ? "approve" : "reject"}`, {
+      method: "PUT",
+    });
     fetch_();
   };
+
+  useEffect(() => { fetch_(); }, []);
 
   if (loading) return <Spinner />;
   if (comments.length === 0) return <Empty text="No pending comments." />;
@@ -316,12 +319,19 @@ function RefundsPanel() {
 
   const fetch_ = () => {
     setLoading(true);
-    authFetch(`${BASE_URL}/refunds`).then((r) => r.json()).then((d) => setRefunds(Array.isArray(d) ? d : [])).finally(() => setLoading(false));
+    listPendingRefunds()
+      .then((d) => setRefunds(Array.isArray(d) ? d : []))
+      .finally(() => setLoading(false));
   };
+
   useEffect(() => { fetch_(); }, []);
 
   const action = async (id, approve) => {
-    await authFetch(`${BASE_URL}/refunds/${id}/${approve ? "approve" : "reject"}`, { method: "PUT" });
+    if (approve) {
+      await approveRefund(id);
+    } else {
+      await rejectRefund(id);
+    }
     fetch_();
   };
 
@@ -337,6 +347,9 @@ function RefundsPanel() {
             <span style={{ fontSize: 12, color: "#888" }}>Status: {r.status}</span>
           </div>
           <p style={styles.metaText}>Product: {r.productName}</p>
+          <p style={styles.metaText}>Customer: {r.customerName || "-"}</p>
+          <p style={styles.metaText}>Quantity: {r.quantity}</p>
+          {r.reason && <p style={styles.metaText}>Reason: {r.reason}</p>}
           <p style={styles.metaText}>Amount: ₺{Number(r.refundAmount).toFixed(2)}</p>
           <p style={styles.metaText}>Requested: {new Date(r.requestedAt).toLocaleDateString("tr-TR")}</p>
           {r.status === "PENDING" && (
