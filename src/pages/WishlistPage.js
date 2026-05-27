@@ -75,7 +75,15 @@ function WishlistPage() {
                   style={styles.image}
                 />
                 <h3 style={styles.productName}>{name}</h3>
-                <p style={styles.price}>{price ? `₺${Number(price).toFixed(2)}` : ""}</p>
+                {product.discountRate > 0 && (
+                  <span style={styles.discountBadge}>🏷️ -{product.discountRate}% OFF</span>
+                )}
+                <p style={styles.price}>
+                  {product.discountRate > 0 && product.originalPrice && (
+                    <span style={styles.originalPrice}>₺{Number(product.originalPrice).toFixed(2)} </span>
+                  )}
+                  {price ? `₺${Number(price).toFixed(2)}` : ""}
+                </p>
 
                 <div style={styles.actions}>
                   <button style={styles.cartBtn} onClick={() => handleAddToCart(product)}>
@@ -108,6 +116,8 @@ const styles = {
   cartBtn: { padding: "8px 14px", backgroundColor: "#4b2e2e", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px" },
   removeBtn: { padding: "8px 14px", backgroundColor: "#dc2626", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px" },
   button: { padding: "10px 20px", backgroundColor: "#6b4f3b", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" },
+  discountBadge: { display: "inline-block", backgroundColor: "#dc2626", color: "white", fontSize: "11px", fontWeight: 700, padding: "2px 8px", borderRadius: "999px", marginBottom: "6px" },
+  originalPrice: { textDecoration: "line-through", color: "#9ca3af", fontSize: "13px", marginRight: "4px" },
 };
 
 export default WishlistPage;
