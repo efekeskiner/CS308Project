@@ -5,7 +5,7 @@ import { listPendingRefunds, approveRefund, rejectRefund } from "../services/ref
 
 const BASE_URL = "http://localhost:8080/api";
 
-const PM_TABS = ["Comments", "Deliveries", "Products & Stock"];
+const PM_TABS = ["Comments", "Deliveries", "Products & Stock", "Add Product", "Add Category"];
 const SM_TABS = ["Invoices", "Discounts", "Refunds", "Revenue Chart"];
 
 export default function AdminPage() {
@@ -41,6 +41,8 @@ export default function AdminPage() {
         {role === "PRODUCT_MANAGER" && tab === 0 && <CommentsPanel />}
         {role === "PRODUCT_MANAGER" && tab === 1 && <DeliveriesPanel />}
         {role === "PRODUCT_MANAGER" && tab === 2 && <ProductsStockPanel />}
+        {role === "PRODUCT_MANAGER" && tab === 3 && <AddProductPanel />}
+        {role === "PRODUCT_MANAGER" && tab === 4 && <AddCategoryPanel />}
         {role === "SALES_MANAGER" && tab === 0 && <InvoicesPanel />}
         {role === "SALES_MANAGER" && tab === 1 && <DiscountsPanel />}
         {role === "SALES_MANAGER" && tab === 2 && <RefundsPanel />}
@@ -295,7 +297,7 @@ function DiscountsPanel() {
         <span style={{ color: "#777", fontSize: 13 }}>{selected.length} selected</span>
       </div>
       <table style={styles.table}>
-        <thead><tr>{["","ID","Name","Price","Discount",""].map((h) => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+        <thead><tr>{["","ID","Name","Price","Set Price","Discount",""].map((h) => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
         <tbody>
           {products.map((p) => (
             <tr key={p.id} style={{ borderBottom: "1px solid #f0e8e0", backgroundColor: selected.includes(p.id) ? "#fef3c7" : "white" }}>
@@ -303,6 +305,9 @@ function DiscountsPanel() {
               <td style={styles.td_}>{p.id}</td>
               <td style={styles.td_}>{p.name}</td>
               <td style={styles.td_}>₺{Number(p.price).toFixed(2)}</td>
+              <td style={styles.td_}>
+                <SetPriceCell productId={p.id} currentPrice={p.price} />
+              </td>
               <td style={styles.td_}>{p.discountRate > 0 ? <span style={{ color: "#dc2626", fontWeight: 600 }}>-{p.discountRate}%</span> : <span style={{ color: "#9ca3af" }}>—</span>}</td>
               <td style={styles.td_}>{p.discountRate > 0 && <button style={styles.rejectBtn} onClick={() => removeDiscount(p.id)}>Remove</button>}</td>
             </tr>
@@ -426,6 +431,243 @@ function RevenuePanel() {
   );
 }
 
+
+
+function SetPriceCell({ productId, currentPrice }) {
+  const [newPrice, setNewPrice] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSet = async () => {
+    const p = parseFloat(newPrice);
+    if (isNaN(p) || p <= 0) { alert('Enter a valid price.'); return; }
+    setSaving(true);
+    try {
+      await authFetch(`${BASE_URL}/products/${productId}/price`, {
+        method: 'PUT',
+        body: JSON.stringify({ price: p })
+      });
+      setNewPrice('');
+      
+    } catch {
+      alert('Could not update price.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+      <input
+        type='number'
+        min={0}
+        step='0.01'
+        placeholder={Number(currentPrice).toFixed(2)}
+        value={newPrice}
+        onChange={(e) => setNewPrice(e.target.value)}
+        style={{ width: 80, padding: '4px 6px', borderRadius: 6, border: '1px solid #d1c7bc', fontSize: 13 }}
+      />
+      <button style={styles.actionBtn} onClick={handleSet} disabled={saving}>
+        {saving ? '...' : 'Set'}
+      </button>
+    </div>
+  );
+}
+function AddProductPanel() {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({
+    name: '', model: '', serialNumber: '', description: '',
+    quantityInStock: '', price: '', warrantyStatus: '', distributorInfo: '',
+    imageUrl: '', categoryId: ''
+  });
+
+  useEffect(() => {
+    fetch(`${BASE_URL}/categories`)
+      .then((r) => r.json())
+      .then((d) => setCategories(Array.isArray(d) ? d : []));
+  }, []);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    setError(''); setSuccess('');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.price || !form.categoryId) {
+      setError('Name, price and category are required.'); return;
+    }
+    setLoading(true);
+    try {
+      const res = await authFetch(`${BASE_URL}/products`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...form,
+          price: parseFloat(form.price),
+          quantityInStock: parseInt(form.quantityInStock) || 0,
+          categoryId: parseInt(form.categoryId)
+        })
+      });
+      if (!res.ok) throw new Error('Failed');
+      setSuccess('Product added successfully!');
+      setForm({ name: '', model: '', serialNumber: '', description: '', quantityInStock: '', price: '', warrantyStatus: '', distributorInfo: '', imageUrl: '', categoryId: '' });
+    } catch {
+      setError('Could not add product. Check all fields.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fields = [
+    { name: 'name', label: 'Book Title *', placeholder: 'e.g. The Great Gatsby' },
+    { name: 'model', label: 'Edition / Model', placeholder: 'e.g. 1st Edition' },
+    { name: 'serialNumber', label: 'ISBN', placeholder: 'e.g. 9780743273565' },
+    { name: 'price', label: 'Price (₺) *', placeholder: 'e.g. 29.99', type: 'number' },
+    { name: 'quantityInStock', label: 'Stock Quantity', placeholder: 'e.g. 50', type: 'number' },
+    { name: 'warrantyStatus', label: 'Warranty Status', placeholder: 'e.g. No warranty' },
+    { name: 'distributorInfo', label: 'Publisher / Distributor', placeholder: 'e.g. Scribner' },
+    { name: 'imageUrl', label: 'Image URL', placeholder: 'https://...' },
+  ];
+
+  return (
+    <div>
+      <h2 style={{ color: '#4b2e2e', marginTop: 0, marginBottom: 20 }}>Add New Product</h2>
+      {success && <p style={{ color: '#16a34a', marginBottom: 16, fontWeight: 600 }}>✓ {success}</p>}
+      {error   && <p style={{ color: '#dc2626', marginBottom: 16 }}>✗ {error}</p>}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        {fields.map((f) => (
+          <div key={f.name}>
+            <label style={styles.label}>{f.label}</label>
+            <input
+              type={f.type || 'text'}
+              name={f.name}
+              placeholder={f.placeholder}
+              value={form[f.name]}
+              onChange={handleChange}
+              style={{ ...styles.input, width: '100%', boxSizing: 'border-box' }}
+            />
+          </div>
+        ))}
+        <div>
+          <label style={styles.label}>Category *</label>
+          <select
+            name='categoryId'
+            value={form.categoryId}
+            onChange={handleChange}
+            style={{ ...styles.input, width: '100%', boxSizing: 'border-box' }}
+          >
+            <option value=''>Select a category...</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label style={styles.label}>Description</label>
+          <textarea
+            name='description'
+            placeholder='Brief description of the book...'
+            value={form.description}
+            onChange={handleChange}
+            rows={3}
+            style={{ ...styles.input, width: '100%', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'Arial, sans-serif' }}
+          />
+        </div>
+      </div>
+      <div style={{ marginTop: 20 }}>
+        <button style={styles.btn} onClick={handleSubmit} disabled={loading}>
+          {loading ? 'Adding...' : '+ Add Product'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AddCategoryPanel() {
+  const [name, setName] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+
+  const fetchCategories = () => {
+    fetch(`${BASE_URL}/categories`)
+      .then((r) => r.json())
+      .then((d) => setCategories(Array.isArray(d) ? d : []));
+  };
+
+  useEffect(() => { fetchCategories(); }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) { setError('Category name is required.'); return; }
+    setLoading(true);
+    try {
+      const res = await authFetch(`${BASE_URL}/categories`, {
+        method: 'POST',
+        body: JSON.stringify({ name: name.trim() })
+      });
+      if (!res.ok) throw new Error('Failed');
+      setSuccess(`Category '${name}' added!`);
+      setName('');
+      fetchCategories();
+    } catch {
+      setError('Could not add category.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteCategory = async (id, catName) => {
+    if (!window.confirm(`Delete category '${catName}'?`)) return;
+    await authFetch(`${BASE_URL}/categories/${id}`, { method: 'DELETE' });
+    fetchCategories();
+  };
+
+  return (
+    <div>
+      <h2 style={{ color: '#4b2e2e', marginTop: 0, marginBottom: 20 }}>Add New Category</h2>
+      {success && <p style={{ color: '#16a34a', marginBottom: 12, fontWeight: 600 }}>✓ {success}</p>}
+      {error   && <p style={{ color: '#dc2626', marginBottom: 12 }}>✗ {error}</p>}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 32, alignItems: 'flex-end' }}>
+        <div style={{ flex: 1 }}>
+          <label style={styles.label}>Category Name *</label>
+          <input
+            type='text'
+            placeholder='e.g. Science Fiction'
+            value={name}
+            onChange={(e) => { setName(e.target.value); setError(''); setSuccess(''); }}
+            style={{ ...styles.input, width: '100%', boxSizing: 'border-box' }}
+          />
+        </div>
+        <button style={styles.btn} onClick={handleSubmit} disabled={loading}>
+          {loading ? 'Adding...' : '+ Add Category'}
+        </button>
+      </div>
+
+      <h3 style={{ color: '#4b2e2e', marginBottom: 12 }}>Existing Categories</h3>
+      {categories.length === 0 ? (
+        <Empty text='No categories yet.' />
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {categories.map((c) => (
+            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#f8f4ee', border: '1px solid #e5d9d0', borderRadius: 8, padding: '8px 14px' }}>
+              <span style={{ fontWeight: 600, color: '#4b2e2e' }}>{c.name}</span>
+              <button
+                style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}
+                onClick={() => deleteCategory(c.id, c.name)}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 function Spinner() { return <div style={{ textAlign: "center", padding: 40, color: "#6b4f3b" }}>Loading...</div>; }
 function Empty({ text }) { return <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>{text}</div>; }
 
