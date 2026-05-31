@@ -150,6 +150,36 @@ function DeliveriesPanel() {
   );
 }
 
+const STOCK_STATUS = {
+  out: { label: "Out of Stock", bg: "#fef2f2", color: "#991b1b", border: "#fecaca" },
+  low: { label: "Low Stock", bg: "#fff4e5", color: "#8a5a00", border: "#ffd7a8" },
+  in: { label: "In Stock", bg: "#e7f6ec", color: "#1b7f3a", border: "#bfe6cb" },
+};
+
+function getStockStatus(stock) {
+  if (stock === 0) return STOCK_STATUS.out;
+  if (stock <= 5) return STOCK_STATUS.low;
+  return STOCK_STATUS.in;
+}
+
+function StockBadge({ stock }) {
+  const s = getStockStatus(stock);
+  return (
+    <span style={{
+      padding: "2px 8px",
+      borderRadius: "999px",
+      fontSize: "11px",
+      fontWeight: 600,
+      backgroundColor: s.bg,
+      color: s.color,
+      border: `1px solid ${s.border}`,
+      whiteSpace: "nowrap",
+    }}>
+      {s.label}
+    </span>
+  );
+}
+
 function ProductsStockPanel() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -195,7 +225,12 @@ function ProductsStockPanel() {
               <td style={styles.td_}>{p.name}</td>
               <td style={styles.td_}>{p.categoryName}</td>
               <td style={styles.td_}>₺{Number(p.price).toFixed(2)}</td>
-              <td style={{ ...styles.td_, color: p.quantityInStock === 0 ? "#dc2626" : "#16a34a", fontWeight: 600 }}>{p.quantityInStock}</td>
+              <td style={styles.td_}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontWeight: 600 }}>{p.quantityInStock}</span>
+                  <StockBadge stock={p.quantityInStock} />
+                </div>
+              </td>
               <td style={styles.td_}>
                 <div style={{ display: "flex", gap: 4 }}>
                   <input type="number" min={0} placeholder="qty" style={styles.stockInput}
