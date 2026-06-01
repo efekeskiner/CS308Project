@@ -61,6 +61,11 @@ public class SecurityConfig {
                 .antMatchers(HttpMethod.DELETE, "/api/categories/**").hasRole("PRODUCT_MANAGER")
                 .antMatchers("/api/deliveries/**").hasRole("PRODUCT_MANAGER")
                 .antMatchers(HttpMethod.GET, "/api/invoices").hasRole("SALES_MANAGER")
+                .antMatchers(HttpMethod.POST, "/api/refunds").hasRole("CUSTOMER")
+                .antMatchers(HttpMethod.GET, "/api/refunds/mine").hasRole("CUSTOMER")
+                .antMatchers(HttpMethod.GET, "/api/refunds").hasRole("SALES_MANAGER")
+                .antMatchers(HttpMethod.PUT, "/api/refunds/*/approve").hasRole("SALES_MANAGER")
+                .antMatchers(HttpMethod.PUT, "/api/refunds/*/reject").hasRole("SALES_MANAGER")
                 .anyRequest().authenticated()
             .and()
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

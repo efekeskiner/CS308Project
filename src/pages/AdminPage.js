@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch, getCurrentUser } from "../services/auth";
 import { listPendingRefunds, approveRefund, rejectRefund } from "../services/refunds";
+import { downloadInvoicePdf } from "../services/invoices";
 
 const BASE_URL = "http://localhost:8080/api";
 
@@ -286,7 +287,7 @@ function InvoicesPanel() {
                 <td style={styles.td_}>{inv.customerName}</td>
                 <td style={styles.td_}>₺{Number(inv.totalPrice).toFixed(2)}</td>
                 <td style={styles.td_}>{new Date(inv.createdAt).toLocaleDateString("tr-TR")}</td>
-                <td style={styles.td_}><a href={`${BASE_URL}/invoices/${inv.id}/pdf`} target="_blank" rel="noreferrer" style={styles.linkBtn}>📄 PDF</a></td>
+                <td style={styles.td_}><button style={styles.linkBtn} onClick={() => downloadInvoicePdf(inv.id, inv.orderId)}>📄 PDF</button></td>
               </tr>
             ))}
           </tbody>
