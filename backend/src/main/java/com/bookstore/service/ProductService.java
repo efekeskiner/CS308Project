@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.NoSuchElementException;
 
 @Service
@@ -102,6 +103,39 @@ public class ProductService {
                 .orElseThrow(() -> new NoSuchElementException("Product " + id + " not found"));
         p.setQuantityInStock(quantity);
         return new ProductDto(productRepository.save(p));
+    }
+
+    /**
+     * Sales-manager action (Req 11): set a product's base/catalogue price.
+     * - No active discount: sets price directly and keeps originalPrice in sync so
+     *   future discounts calculate from the correct base.
+     * - Active discount: updates originalPrice to the new base and recomputes the
+     *   effective (discounted) price so the displayed price stays consistent.
+     */
+    @Transactional
+    public ProductDto setPrice(Long id, BigDecimal newPrice) {
+        if (newPrice == null || newPrice.signum() < 0) {
+            throw new IllegalArgumentException("Price must be non-negative");
+        }
+        Product p = productRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Product " + id + " not found"));
+        BigDecimal rate = p.getDiscountRate() != null ? p.getDiscountRate() : BigDecimal.ZERO;
+        if (rate.signum() > 0) {
+            // Discount is active: newPrice is the new base; recompute effective price.
+            p.setOriginalPrice(newPrice);
+            BigDecimal factor = BigDecimal.ONE.subtract(rate.divide(BigDecimal.valueOf(100)));
+            p.setPrice(newPrice.multiply(factor).setScale(2, RoundingMode.HALF_UP));
+        } else {
+            // No active discount: newPrice is the effective price.
+            p.setPrice(newPrice);
+            // Keep originalPrice in sync so future discount applications use this base.
+            if (p.getOriginalPrice() != null) {
+                p.setOriginalPrice(newPrice);
+            }
+        }
+        return new ProductDto(productRepository.save(p),
+                reviewRepository.findAverageScoreByProductId(id),
+                reviewRepository.findCountByProductId(id));
     }
 
     private void applyRequest(Product p, ProductRequest req) {

@@ -35,3 +35,5 @@ app:
     refresh-expiration-ms: 604800000
   invoice:
     storage-path: ./invoices
+  analytics:
+    cost-ratio: 0.5

@@ -43,6 +43,11 @@ export async function listPendingRefunds() {
   return parseResponse(res, "Could not load refund requests.");
 }
 
+export async function listAllRefunds() {
+  const res = await authFetch(`${BASE_URL}?status=ALL`);
+  return parseResponse(res, "Could not load refund requests.");
+}
+
 export async function approveRefund(id) {
   const res = await authFetch(`${BASE_URL}/${id}/approve`, {
     method: "PUT",

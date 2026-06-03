@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch, getCurrentUser } from "../services/auth";
-import { listPendingRefunds, approveRefund, rejectRefund } from "../services/refunds";
+import { listAllRefunds, approveRefund, rejectRefund } from "../services/refunds";
 import { downloadInvoicePdf } from "../services/invoices";
 
 const BASE_URL = "http://localhost:8080/api";
@@ -304,9 +304,12 @@ function DiscountsPanel() {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
 
+  const loadProducts = () =>
+    fetch(`${BASE_URL}/products?size=100`).then((r) => r.json()).then((d) => setProducts(d.content ?? d));
+
   useEffect(() => {
-    fetch(`${BASE_URL}/products?size=100`).then((r) => r.json()).then((d) => setProducts(d.content ?? d)).finally(() => setLoading(false));
-  }, []);
+    loadProducts().finally(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleSelect = (id) => setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
 
@@ -315,11 +318,12 @@ function DiscountsPanel() {
     await authFetch(`${BASE_URL}/discounts`, { method: "POST", body: JSON.stringify({ productIds: selected, discountRate: parseFloat(rate) }) });
     setMsg(`Discount of ${rate}% applied to ${selected.length} product(s).`);
     setSelected([]); setRate("");
+    loadProducts();
   };
 
   const removeDiscount = async (productId) => {
     await authFetch(`${BASE_URL}/discounts/${productId}`, { method: "DELETE" });
-    window.location.reload();
+    loadProducts();
   };
 
   if (loading) return <Spinner />;
@@ -333,7 +337,7 @@ function DiscountsPanel() {
         <span style={{ color: "#777", fontSize: 13 }}>{selected.length} selected</span>
       </div>
       <table style={styles.table}>
-        <thead><tr>{["","ID","Name","Price","Set Price","Discount",""].map((h) => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+        <thead><tr>{["","ID","Name","Price","Set Base Price","Discount",""].map((h) => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
         <tbody>
           {products.map((p) => (
             <tr key={p.id} style={{ borderBottom: "1px solid #f0e8e0", backgroundColor: selected.includes(p.id) ? "#fef3c7" : "white" }}>
@@ -342,7 +346,7 @@ function DiscountsPanel() {
               <td style={styles.td_}>{p.name}</td>
               <td style={styles.td_}>₺{Number(p.price).toFixed(2)}</td>
               <td style={styles.td_}>
-                <SetPriceCell productId={p.id} currentPrice={p.price} />
+                <SetPriceCell productId={p.id} basePrice={p.originalPrice ?? p.price} onSuccess={loadProducts} />
               </td>
               <td style={styles.td_}>{p.discountRate > 0 ? <span style={{ color: "#dc2626", fontWeight: 600 }}>-{p.discountRate}%</span> : <span style={{ color: "#9ca3af" }}>—</span>}</td>
               <td style={styles.td_}>{p.discountRate > 0 && <button style={styles.rejectBtn} onClick={() => removeDiscount(p.id)}>Remove</button>}</td>
@@ -360,7 +364,7 @@ function RefundsPanel() {
 
   const fetch_ = () => {
     setLoading(true);
-    listPendingRefunds()
+    listAllRefunds()
       .then((d) => setRefunds(Array.isArray(d) ? d : []))
       .finally(() => setLoading(false));
   };
@@ -377,7 +381,7 @@ function RefundsPanel() {
   };
 
   if (loading) return <Spinner />;
-  if (refunds.length === 0) return <Empty text="No pending refund requests." />;
+  if (refunds.length === 0) return <Empty text="No refund requests." />;
 
   return (
     <div style={styles.list}>
@@ -469,7 +473,7 @@ function RevenuePanel() {
 
 
 
-function SetPriceCell({ productId, currentPrice }) {
+function SetPriceCell({ productId, basePrice, onSuccess }) {
   const [newPrice, setNewPrice] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -478,12 +482,17 @@ function SetPriceCell({ productId, currentPrice }) {
     if (isNaN(p) || p <= 0) { alert('Enter a valid price.'); return; }
     setSaving(true);
     try {
-      await authFetch(`${BASE_URL}/products/${productId}/price`, {
+      const res = await authFetch(`${BASE_URL}/products/${productId}/price`, {
         method: 'PUT',
         body: JSON.stringify({ price: p })
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || err.message || 'Could not update price.');
+        return;
+      }
       setNewPrice('');
-      
+      if (onSuccess) onSuccess();
     } catch {
       alert('Could not update price.');
     } finally {
@@ -497,7 +506,7 @@ function SetPriceCell({ productId, currentPrice }) {
         type='number'
         min={0}
         step='0.01'
-        placeholder={Number(currentPrice).toFixed(2)}
+        placeholder={Number(basePrice).toFixed(2)}
         value={newPrice}
         onChange={(e) => setNewPrice(e.target.value)}
         style={{ width: 80, padding: '4px 6px', borderRadius: 6, border: '1px solid #d1c7bc', fontSize: 13 }}

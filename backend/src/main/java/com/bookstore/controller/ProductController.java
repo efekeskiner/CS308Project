@@ -2,6 +2,7 @@ package com.bookstore.controller;
 
 import com.bookstore.dto.ProductDto;
 import com.bookstore.dto.ProductRequest;
+import com.bookstore.dto.SetPriceRequest;
 import com.bookstore.service.ProductService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -79,6 +80,19 @@ public class ProductController {
                                          @RequestBody Map<String, Integer> body) {
         try {
             return ResponseEntity.ok(productService.updateStock(id, body.get("quantity")));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // Sales-manager action (Req 11): set a product's base price.
+    @PutMapping("/{id}/price")
+    public ResponseEntity<?> setPrice(@PathVariable Long id,
+                                      @RequestBody SetPriceRequest req) {
+        try {
+            return ResponseEntity.ok(productService.setPrice(id, req.getPrice()));
         } catch (NoSuchElementException e) {
             return ResponseEntity.notFound().build();
         } catch (IllegalArgumentException e) {
