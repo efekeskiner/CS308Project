@@ -95,7 +95,7 @@ function ProductList() {
         <div>
           <h1 style={styles.title}>Book Store</h1>
           <p style={styles.subtitle}>
-            Discover books by title, author, category, price, and popularity.
+            Discover books by title, category, price, and popularity.
           </p>
         </div>
       </div>
@@ -103,7 +103,7 @@ function ProductList() {
       <div style={styles.topBar}>
         <input
           type="text"
-          placeholder="Search by title, author or description..."
+          placeholder="Search by title or description..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={styles.searchInput}
