@@ -295,10 +295,10 @@ function ProductDetailPage() {
 
   const discountRate = Number(product.discountRate) || 0;
   const hasDiscount = discountRate > 0;
-  const originalPrice = Number(product.price) || 0;
-  const discountedPrice = hasDiscount
-    ? originalPrice * (1 - discountRate / 100)
-    : originalPrice;
+  // Backend already stores the effective (discounted) price in `price` and the
+  // pre-discount list price in `originalPrice` — do NOT re-apply the discount.
+  const price = Number(product.price) || 0;
+  const originalPrice = Number(product.originalPrice) || price;
 
   return (
     <div className="product-detail-page">
@@ -338,7 +338,7 @@ function ProductDetailPage() {
             )}
 
             <span className="discounted-price">
-              {(hasDiscount ? discountedPrice : originalPrice).toFixed(2)} TL
+              {price.toFixed(2)} TL
             </span>
           </div>
 

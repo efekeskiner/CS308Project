@@ -121,10 +121,10 @@ function ProductCard({ product, onAddToCart, isAdded }) {
 
   const discountRate = Number(product.discountRate) || 0;
   const hasDiscount = discountRate > 0;
-  const originalPrice = Number(product.price) || 0;
-  const discountedPrice = hasDiscount
-    ? originalPrice * (1 - discountRate / 100)
-    : originalPrice;
+  // The backend already stores the effective (discounted) price in `price` and
+  // the pre-discount list price in `originalPrice` — do NOT re-apply the discount.
+  const price = Number(product.price) || 0;
+  const originalPrice = Number(product.originalPrice) || price;
   // Cover images come from the product's own imageUrl column (served from
   // /public/images/books). The local SVG is only used if that is missing or
   // fails to load — we no longer reach out to any third-party cover API.
@@ -161,7 +161,7 @@ function ProductCard({ product, onAddToCart, isAdded }) {
         )}
 
         <span style={styles.price}>
-          {(hasDiscount ? discountedPrice : originalPrice).toFixed(2)} TL
+          {price.toFixed(2)} TL
         </span>
       </div>
 
