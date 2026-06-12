@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch, getCurrentUser } from "../services/auth";
 import { listAllRefunds, approveRefund, rejectRefund } from "../services/refunds";
@@ -311,6 +311,16 @@ function DiscountsPanel() {
   useEffect(() => {
     loadProducts().finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filteredProducts = useMemo(() => {
+    const query = searchTerm.toLowerCase().trim();
+
+    if (!query) return products;
+
+    return products.filter((p) =>
+      (p.name || "").toLowerCase().includes(query)
+    );
+  }, [products, searchTerm]);
 
   const toggleSelect = (id) => setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
 
