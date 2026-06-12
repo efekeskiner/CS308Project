@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch, getCurrentUser } from "../services/auth";
 
@@ -262,10 +262,21 @@ function DiscountsPanel() {
   const [rate, setRate] = useState("");
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetch(`${BASE_URL}/products?size=100`).then((r) => r.json()).then((d) => setProducts(d.content ?? d)).finally(() => setLoading(false));
   }, []);
+
+  const filteredProducts = useMemo(() => {
+    const query = searchTerm.toLowerCase().trim();
+
+    if (!query) return products;
+
+    return products.filter((p) =>
+      (p.name || "").toLowerCase().includes(query)
+    );
+  }, [products, searchTerm]);
 
   const toggleSelect = (id) => setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
 
@@ -287,23 +298,53 @@ function DiscountsPanel() {
     <div>
       {msg && <p style={{ color: "#16a34a", marginBottom: 16 }}>{msg}</p>}
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
-        <input type="number" min={1} max={100} placeholder="Discount % (e.g. 20)" style={styles.input} value={rate} onChange={(e) => setRate(e.target.value)} />
-        <button style={styles.approveBtn} onClick={applyDiscount}>Apply to Selected</button>
-        <span style={{ color: "#777", fontSize: 13 }}>{selected.length} selected</span>
+        <input
+          type="text"
+          placeholder="Search product by name..."
+          style={styles.searchInput}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+
+        <input
+          type="number"
+          min={1}
+          max={100}
+          placeholder="Discount % (e.g. 20)"
+          style={styles.input}
+          value={rate}
+          onChange={(e) => setRate(e.target.value)}
+        />
+
+        <button style={styles.approveBtn} onClick={applyDiscount}>
+          Apply to Selected
+        </button>
+
+        <span style={{ color: "#777", fontSize: 13 }}>
+          {selected.length} selected
+        </span>
       </div>
       <table style={styles.table}>
         <thead><tr>{["","ID","Name","Price","Discount",""].map((h) => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
         <tbody>
-          {products.map((p) => (
-            <tr key={p.id} style={{ borderBottom: "1px solid #f0e8e0", backgroundColor: selected.includes(p.id) ? "#fef3c7" : "white" }}>
-              <td style={styles.td_}><input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggleSelect(p.id)} /></td>
-              <td style={styles.td_}>{p.id}</td>
-              <td style={styles.td_}>{p.name}</td>
-              <td style={styles.td_}>₺{Number(p.price).toFixed(2)}</td>
-              <td style={styles.td_}>{p.discountRate > 0 ? <span style={{ color: "#dc2626", fontWeight: 600 }}>-{p.discountRate}%</span> : <span style={{ color: "#9ca3af" }}>—</span>}</td>
-              <td style={styles.td_}>{p.discountRate > 0 && <button style={styles.rejectBtn} onClick={() => removeDiscount(p.id)}>Remove</button>}</td>
+          {filteredProducts.length === 0 ? (
+            <tr>
+              <td colSpan="6" style={{ ...styles.td_, textAlign: "center", color: "#9ca3af" }}>
+                No products found.
+              </td>
             </tr>
-          ))}
+          ) : (
+            filteredProducts.map((p) => (
+              <tr key={p.id} style={{ borderBottom: "1px solid #f0e8e0", backgroundColor: selected.includes(p.id) ? "#fef3c7" : "white" }}>
+                <td style={styles.td_}><input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggleSelect(p.id)} /></td>
+                <td style={styles.td_}>{p.id}</td>
+                <td style={styles.td_}>{p.name}</td>
+                <td style={styles.td_}>₺{Number(p.price).toFixed(2)}</td>
+                <td style={styles.td_}>{p.discountRate > 0 ? <span style={{ color: "#dc2626", fontWeight: 600 }}>-{p.discountRate}%</span> : <span style={{ color: "#9ca3af" }}>—</span>}</td>
+                <td style={styles.td_}>{p.discountRate > 0 && <button style={styles.rejectBtn} onClick={() => removeDiscount(p.id)}>Remove</button>}</td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
@@ -437,4 +478,12 @@ const styles = {
   center: { textAlign: "center", paddingTop: 80, color: "#555" },
   statCard: { flex: 1, minWidth: 160, backgroundColor: "white", borderRadius: 12, padding: "16px 20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: "1px solid #f0e8e0" },
   chartWrap: { backgroundColor: "#fdfaf7", borderRadius: 12, padding: "20px 24px", border: "1px solid #f0e8e0" },
+  searchInput: {
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid #d1c7bc",
+    fontSize: 14,
+    outline: "none",
+    minWidth: 260,
+  },
 };
