@@ -6,6 +6,9 @@ import { addToCart } from "../services/cart";
 
 const BASE_URL = "http://localhost:8080/api";
 
+const FALLBACK_IMAGE =
+  "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='420' viewBox='0 0 300 420'%3E%3Crect width='300' height='420' fill='%23f3ece3'/%3E%3Crect x='45' y='55' width='210' height='310' rx='16' fill='%23ffffff' stroke='%23d1c7bc' stroke-width='3'/%3E%3Ctext x='150' y='195' text-anchor='middle' font-family='Arial' font-size='24' fill='%236b4f3b'%3ENo Image%3C/text%3E%3Ctext x='150' y='230' text-anchor='middle' font-family='Arial' font-size='16' fill='%238b7b72'%3EBook Cover%3C/text%3E%3C/svg%3E";
+
 function WishlistPage() {
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,12 +73,23 @@ function WishlistPage() {
             return (
               <div key={id} style={styles.card}>
                 <img
-                  src={image || "https://via.placeholder.com/200?text=No+Image"}
+                  src={image || FALLBACK_IMAGE}
                   alt={name}
                   style={styles.image}
+                  onError={(event) => {
+                    event.currentTarget.src = FALLBACK_IMAGE;
+                  }}
                 />
                 <h3 style={styles.productName}>{name}</h3>
-                <p style={styles.price}>{price ? `₺${Number(price).toFixed(2)}` : ""}</p>
+                {product.discountRate > 0 && (
+                  <span style={styles.discountBadge}>🏷️ -{product.discountRate}% OFF</span>
+                )}
+                <p style={styles.price}>
+                  {product.discountRate > 0 && product.originalPrice && (
+                    <span style={styles.originalPrice}>₺{Number(product.originalPrice).toFixed(2)} </span>
+                  )}
+                  {price ? `₺${Number(price).toFixed(2)}` : ""}
+                </p>
 
                 <div style={styles.actions}>
                   <button style={styles.cartBtn} onClick={() => handleAddToCart(product)}>
@@ -99,42 +113,17 @@ const styles = {
   title: { fontSize: "32px", marginBottom: "24px", color: "#4b2e2e" },
   emptyBox: { textAlign: "center", paddingTop: "60px" },
   empty: { fontSize: "18px", color: "#6b5b53", marginBottom: "16px" },
-  
-  grid: {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-  gap: "24px",
-},
-
-  card: {
-    border: "1px solid #e5d9ce",
-    padding: "20px",
-    borderRadius: "16px",
-    textAlign: "center",
-    backgroundColor: "white",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-    maxWidth: "320px",
-    width: "100%",
-    justifySelf: "center",
-  },
-
-  image: {
-    width: "100%",
-    height: "260px",
-    objectFit: "contain",
-    borderRadius: "8px",
-    border: "1px solid #eaded7",
-    backgroundColor: "white",
-    padding: "10px",
-    boxSizing: "border-box",
-  },
-  
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px" },
+  card: { border: "1px solid #e5d9ce", padding: "16px", borderRadius: "12px", textAlign: "center", backgroundColor: "white", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" },
+  image: { width: "100%", height: "220px", objectFit: "contain", objectPosition: "center", backgroundColor: "#ffffff", border: "1px solid #eee5dc", borderRadius: "8px", padding: "8px", boxSizing: "border-box" },
   productName: { fontSize: "15px", fontWeight: 600, color: "#4b2e2e", margin: "10px 0 4px" },
   price: { color: "#6b4f3b", fontWeight: 700, marginBottom: "12px" },
   actions: { display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" },
   cartBtn: { padding: "8px 14px", backgroundColor: "#4b2e2e", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px" },
   removeBtn: { padding: "8px 14px", backgroundColor: "#dc2626", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px" },
   button: { padding: "10px 20px", backgroundColor: "#6b4f3b", color: "white", border: "none", borderRadius: "8px", cursor: "pointer" },
+  discountBadge: { display: "inline-block", backgroundColor: "#dc2626", color: "white", fontSize: "11px", fontWeight: 700, padding: "2px 8px", borderRadius: "999px", marginBottom: "6px" },
+  originalPrice: { textDecoration: "line-through", color: "#9ca3af", fontSize: "13px", marginRight: "4px" },
 };
 
 export default WishlistPage;

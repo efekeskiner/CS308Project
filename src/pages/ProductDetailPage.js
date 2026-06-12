@@ -293,6 +293,13 @@ function ProductDetailPage() {
 
   const imageSrc = getBookImage(product);
 
+  const discountRate = Number(product.discountRate) || 0;
+  const hasDiscount = discountRate > 0;
+  const originalPrice = Number(product.price) || 0;
+  const discountedPrice = hasDiscount
+    ? originalPrice * (1 - discountRate / 100)
+    : originalPrice;
+
   return (
     <div className="product-detail-page">
       <button className="back-button" onClick={() => navigate("/products")}>
@@ -320,14 +327,18 @@ function ProductDetailPage() {
           </p>
 
           <div className="price-section">
-            {Number(product.discountRate) > 0 && (
+            {hasDiscount && (
+              <span className="discount-badge">{Math.round(discountRate)}% OFF</span>
+            )}
+
+            {hasDiscount && (
               <span className="original-price">
-                {product.originalPrice} TL
+                {originalPrice.toFixed(2)} TL
               </span>
             )}
 
             <span className="discounted-price">
-              {product.price} TL
+              {(hasDiscount ? discountedPrice : originalPrice).toFixed(2)} TL
             </span>
           </div>
 

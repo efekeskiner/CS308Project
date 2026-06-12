@@ -7,10 +7,13 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import com.bookstore.model.Product;
+
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 import java.io.File;
 import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 public class EmailService {
@@ -55,6 +58,88 @@ public class EmailService {
             log.error("Failed to send invoice email to {} for order #{}: {}", toEmail, orderId, e.getMessage());
         } catch (Exception e) {
             log.error("Unexpected error sending invoice email: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Notify a customer that one or more products on their wishlist are now discounted
+     * (Req 11). Sends a single HTML email listing each affected product's old price,
+     * new price, and percentage off. Failures are logged and never break the caller.
+     */
+    @Async
+    public void sendDiscountNotification(String toEmail, String customerName, List<Product> products) {
+        if (products == null || products.isEmpty()) return;
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(toEmail);
+            helper.setSubject("Discounts on your wishlist — Online Bookstore");
+
+            StringBuilder rows = new StringBuilder();
+            for (Product p : products) {
+                String oldPrice = p.getOriginalPrice() != null ? p.getOriginalPrice().toPlainString() : "-";
+                String rate = p.getDiscountRate() != null
+                        ? p.getDiscountRate().stripTrailingZeros().toPlainString() : "0";
+                rows.append("<li><strong>").append(p.getName()).append("</strong>: ")
+                    .append("was ₺").append(oldPrice)
+                    .append(", now ₺").append(p.getPrice().toPlainString())
+                    .append(" (").append(rate).append("% off)")
+                    .append("</li>");
+            }
+
+            helper.setText(
+                "<div style='font-family:sans-serif;'>" +
+                "<h2>Good news, " + customerName + "!</h2>" +
+                "<p>Items on your wishlist are now on discount:</p>" +
+                "<ul>" + rows + "</ul>" +
+                "<br/><p>— Online Bookstore Team</p>" +
+                "</div>",
+                true
+            );
+
+            mailSender.send(message);
+            log.info("Discount notification sent to {} for {} product(s)", toEmail, products.size());
+
+        } catch (MessagingException e) {
+            log.error("Failed to send discount notification to {}: {}", toEmail, e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error sending discount notification: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Notify a customer that their refund request has been approved by the sales
+     * manager (Req 15). Sent when the refund is authorized and the item returns
+     * to stock. Failures are logged and never break the approval flow.
+     */
+    @Async
+    public void sendRefundApprovedNotification(String toEmail, String customerName,
+                                               String productName, BigDecimal refundAmount) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(toEmail);
+            helper.setSubject("Your refund has been approved — Online Bookstore");
+            helper.setText(
+                "<div style='font-family:sans-serif;'>" +
+                "<h2>Good news, " + customerName + "!</h2>" +
+                "<p>Your refund request for <strong>" + productName + "</strong> has been approved.</p>" +
+                "<p>A refund of <strong>₺" + refundAmount.toPlainString() + "</strong> has been issued " +
+                "and the item has been returned to our stock.</p>" +
+                "<br/><p>— Online Bookstore Team</p>" +
+                "</div>",
+                true
+            );
+
+            mailSender.send(message);
+            log.info("Refund-approved notification sent to {} for product '{}'", toEmail, productName);
+
+        } catch (MessagingException e) {
+            log.error("Failed to send refund notification to {}: {}", toEmail, e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error sending refund notification: {}", e.getMessage());
         }
     }
 }

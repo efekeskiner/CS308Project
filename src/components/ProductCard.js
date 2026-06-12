@@ -119,20 +119,16 @@ function ProductCard({ product, onAddToCart, isAdded }) {
 
   if (!product) return null;
 
-  const hasDiscount = Number(product.discountRate) > 0;
-  const getBookImage = (product) => {
-    if (product.imageUrl) {
-      return product.imageUrl;
-    }
-
-    if (product.serialNumber) {
-      return `https://covers.openlibrary.org/b/isbn/${product.serialNumber}-L.jpg`;
-    }
-
-    return FALLBACK_IMAGE;
-  };
-
-  const imageSrc = getBookImage(product);
+  const discountRate = Number(product.discountRate) || 0;
+  const hasDiscount = discountRate > 0;
+  const originalPrice = Number(product.price) || 0;
+  const discountedPrice = hasDiscount
+    ? originalPrice * (1 - discountRate / 100)
+    : originalPrice;
+  // Cover images come from the product's own imageUrl column (served from
+  // /public/images/books). The local SVG is only used if that is missing or
+  // fails to load — we no longer reach out to any third-party cover API.
+  const imageSrc = product.imageUrl || FALLBACK_IMAGE;
 
   return (
     <div style={styles.card} onClick={handleCardClick}>
@@ -155,20 +151,18 @@ function ProductCard({ product, onAddToCart, isAdded }) {
 
       <div style={styles.priceContainer}>
         {hasDiscount && (
+          <span style={styles.discountBadge}>{Math.round(discountRate)}% OFF</span>
+        )}
+
+        {hasDiscount && (
           <span style={styles.originalPrice}>
-            {Number(product.originalPrice).toFixed(2)} TL
+            {originalPrice.toFixed(2)} TL
           </span>
         )}
 
         <span style={styles.price}>
-          {Number(product.price ?? 0).toFixed(2)} TL
+          {(hasDiscount ? discountedPrice : originalPrice).toFixed(2)} TL
         </span>
-
-        {hasDiscount && (
-          <span style={styles.discountRate}>
-            %{Number(product.discountRate)} off
-          </span>
-        )}
       </div>
 
       <p style={styles.rating}>
@@ -269,10 +263,13 @@ const styles = {
     fontWeight: "bold",
     color: "#2f1e14",
   },
-  discountRate: {
-    fontSize: "13px",
+  discountBadge: {
+    fontSize: "12px",
     fontWeight: "bold",
-    color: "#8b5e3c",
+    color: "#fff",
+    backgroundColor: "#8b5e3c",
+    padding: "2px 8px",
+    borderRadius: "6px",
   },
   rating: {
     fontSize: "15px",

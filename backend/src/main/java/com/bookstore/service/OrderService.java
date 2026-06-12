@@ -74,7 +74,8 @@ public class OrderService {
             p.setQuantityInStock(p.getQuantityInStock() - line.getQuantity());
             productRepository.save(p);
 
-            OrderItem item = new OrderItem(order, p, line.getQuantity(), p.getPrice());
+            BigDecimal originalUnit = p.getOriginalPrice() != null ? p.getOriginalPrice() : p.getPrice();
+            OrderItem item = new OrderItem(order, p, line.getQuantity(), p.getPrice(), originalUnit);
             order.addItem(item);
 
             BigDecimal lineTotal = p.getPrice().multiply(BigDecimal.valueOf(line.getQuantity()));

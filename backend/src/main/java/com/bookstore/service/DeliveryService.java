@@ -28,11 +28,9 @@ public class DeliveryService {
     }
 
     @Transactional(readOnly = true)
-    public Page<DeliveryDto> list(int page, int size) {
-        if (page < 0) page = 0;
-        if (size <= 0 || size > 100) size = 20;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
-        return deliveryRepository.findAll(pageable).map(DeliveryDto::new);
+    public List<DeliveryDto> list() {
+        return deliveryRepository.findAll(Sort.by(Sort.Direction.DESC, "id"))
+                .stream().map(DeliveryDto::new).collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional

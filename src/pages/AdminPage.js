@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch, getCurrentUser } from "../services/auth";
+import { listAllRefunds, approveRefund, rejectRefund } from "../services/refunds";
+import { downloadInvoicePdf } from "../services/invoices";
 
 const BASE_URL = "http://localhost:8080/api";
 
-const PM_TABS = ["Comments", "Deliveries", "Products & Stock"];
+const PM_TABS = ["Comments", "Deliveries", "Products & Stock", "Add Product", "Add Category"];
 const SM_TABS = ["Invoices", "Discounts", "Refunds", "Revenue Chart"];
 
 export default function AdminPage() {
@@ -40,6 +42,8 @@ export default function AdminPage() {
         {role === "PRODUCT_MANAGER" && tab === 0 && <CommentsPanel />}
         {role === "PRODUCT_MANAGER" && tab === 1 && <DeliveriesPanel />}
         {role === "PRODUCT_MANAGER" && tab === 2 && <ProductsStockPanel />}
+        {role === "PRODUCT_MANAGER" && tab === 3 && <AddProductPanel />}
+        {role === "PRODUCT_MANAGER" && tab === 4 && <AddCategoryPanel />}
         {role === "SALES_MANAGER" && tab === 0 && <InvoicesPanel />}
         {role === "SALES_MANAGER" && tab === 1 && <DiscountsPanel />}
         {role === "SALES_MANAGER" && tab === 2 && <RefundsPanel />}
@@ -61,12 +65,14 @@ function CommentsPanel() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetch_(); }, []);
-
   const action = async (id, approve) => {
-    await authFetch(`${BASE_URL}/comments/${id}/${approve ? "approve" : "reject"}`, { method: "PUT" });
+    await authFetch(`${BASE_URL}/comments/${id}/${approve ? "approve" : "reject"}`, {
+      method: "PUT",
+    });
     fetch_();
   };
+
+  useEffect(() => { fetch_(); }, []);
 
   if (loading) return <Spinner />;
   if (comments.length === 0) return <Empty text="No pending comments." />;
@@ -145,6 +151,36 @@ function DeliveriesPanel() {
   );
 }
 
+const STOCK_STATUS = {
+  out: { label: "Out of Stock", bg: "#fef2f2", color: "#991b1b", border: "#fecaca" },
+  low: { label: "Low Stock", bg: "#fff4e5", color: "#8a5a00", border: "#ffd7a8" },
+  in: { label: "In Stock", bg: "#e7f6ec", color: "#1b7f3a", border: "#bfe6cb" },
+};
+
+function getStockStatus(stock) {
+  if (stock === 0) return STOCK_STATUS.out;
+  if (stock <= 5) return STOCK_STATUS.low;
+  return STOCK_STATUS.in;
+}
+
+function StockBadge({ stock }) {
+  const s = getStockStatus(stock);
+  return (
+    <span style={{
+      padding: "2px 8px",
+      borderRadius: "999px",
+      fontSize: "11px",
+      fontWeight: 600,
+      backgroundColor: s.bg,
+      color: s.color,
+      border: `1px solid ${s.border}`,
+      whiteSpace: "nowrap",
+    }}>
+      {s.label}
+    </span>
+  );
+}
+
 function ProductsStockPanel() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -190,7 +226,12 @@ function ProductsStockPanel() {
               <td style={styles.td_}>{p.name}</td>
               <td style={styles.td_}>{p.categoryName}</td>
               <td style={styles.td_}>₺{Number(p.price).toFixed(2)}</td>
-              <td style={{ ...styles.td_, color: p.quantityInStock === 0 ? "#dc2626" : "#16a34a", fontWeight: 600 }}>{p.quantityInStock}</td>
+              <td style={styles.td_}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontWeight: 600 }}>{p.quantityInStock}</span>
+                  <StockBadge stock={p.quantityInStock} />
+                </div>
+              </td>
               <td style={styles.td_}>
                 <div style={{ display: "flex", gap: 4 }}>
                   <input type="number" min={0} placeholder="qty" style={styles.stockInput}
@@ -246,7 +287,7 @@ function InvoicesPanel() {
                 <td style={styles.td_}>{inv.customerName}</td>
                 <td style={styles.td_}>₺{Number(inv.totalPrice).toFixed(2)}</td>
                 <td style={styles.td_}>{new Date(inv.createdAt).toLocaleDateString("tr-TR")}</td>
-                <td style={styles.td_}><a href={`${BASE_URL}/invoices/${inv.id}/pdf`} target="_blank" rel="noreferrer" style={styles.linkBtn}>📄 PDF</a></td>
+                <td style={styles.td_}><button style={styles.linkBtn} onClick={() => downloadInvoicePdf(inv.id, inv.orderId)}>📄 PDF</button></td>
               </tr>
             ))}
           </tbody>
@@ -262,11 +303,14 @@ function DiscountsPanel() {
   const [rate, setRate] = useState("");
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [search, setSearch] = useState("");
+
+  const loadProducts = () =>
+    fetch(`${BASE_URL}/products?size=100`).then((r) => r.json()).then((d) => setProducts(d.content ?? d));
 
   useEffect(() => {
-    fetch(`${BASE_URL}/products?size=100`).then((r) => r.json()).then((d) => setProducts(d.content ?? d)).finally(() => setLoading(false));
-  }, []);
+    loadProducts().finally(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredProducts = useMemo(() => {
     const query = searchTerm.toLowerCase().trim();
@@ -285,71 +329,90 @@ function DiscountsPanel() {
     await authFetch(`${BASE_URL}/discounts`, { method: "POST", body: JSON.stringify({ productIds: selected, discountRate: parseFloat(rate) }) });
     setMsg(`Discount of ${rate}% applied to ${selected.length} product(s).`);
     setSelected([]); setRate("");
+    loadProducts();
   };
 
   const removeDiscount = async (productId) => {
     await authFetch(`${BASE_URL}/discounts/${productId}`, { method: "DELETE" });
-    window.location.reload();
+    loadProducts();
   };
 
   if (loading) return <Spinner />;
 
+  const query = search.trim().toLowerCase();
+  const filtered = query
+    ? products.filter((p) => (p.name || "").toLowerCase().includes(query))
+    : products;
+
+  const ratePreview = (() => {
+    const r = parseFloat(rate);
+    if (isNaN(r) || r <= 0) return null;
+    return `A ₺100.00 book would become ₺${(100 * (1 - r / 100)).toFixed(2)}.`;
+  })();
+
   return (
     <div>
       {msg && <p style={{ color: "#16a34a", marginBottom: 16 }}>{msg}</p>}
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
-        <input
-          type="text"
-          placeholder="Search product by name..."
-          style={styles.searchInput}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
 
-        <div style={styles.discountInputWrapper}>
-          <span style={styles.percentPrefix}>%</span>
-          <input
-            type="number"
-            min={1}
-            max={100}
-            placeholder="Discount"
-            style={styles.discountInput}
-            value={rate}
-            onChange={(e) => setRate(e.target.value)}
-          />
+      {/* Discount controls — the rate is always a percentage off the base price */}
+      <div style={styles.discountBar}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={styles.label}>Discount rate</label>
+          <div style={styles.percentField}>
+            <input
+              type="number"
+              min={1}
+              max={90}
+              placeholder="20"
+              style={styles.percentInput}
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
+            />
+            <span style={styles.percentSuffix}>%</span>
+          </div>
         </div>
-
-        <button style={styles.approveBtn} onClick={applyDiscount}>
+        <button style={{ ...styles.approveBtn, padding: "10px 18px" }} onClick={applyDiscount}>
           Apply to Selected
         </button>
-
-        <span style={{ color: "#777", fontSize: 13 }}>
-          {selected.length} selected
-        </span>
+        <span style={{ color: "#777", fontSize: 13 }}>{selected.length} selected</span>
       </div>
-      <table style={styles.table}>
-        <thead><tr>{["","ID","Name","Price","Discount",""].map((h) => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
-        <tbody>
-          {filteredProducts.length === 0 ? (
-            <tr>
-              <td colSpan="6" style={{ ...styles.td_, textAlign: "center", color: "#9ca3af" }}>
-                No products found.
-              </td>
-            </tr>
-          ) : (
-            filteredProducts.map((p) => (
+      <p style={{ margin: "0 0 20px", fontSize: 12, color: "#8a7d72" }}>
+        Sets the price to <strong>base price × (1 − rate ÷ 100)</strong>.
+        {ratePreview ? ` ${ratePreview}` : " Enter a whole percentage between 1 and 90."}
+      </p>
+
+      <div style={{ marginBottom: 16 }}>
+        <input
+          type="text"
+          placeholder="🔍 Search products by name…"
+          style={{ ...styles.input, width: "100%", maxWidth: 360, boxSizing: "border-box" }}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {filtered.length === 0 ? (
+        <Empty text={query ? `No products match “${search}”.` : "No products found."} />
+      ) : (
+        <table style={styles.table}>
+          <thead><tr>{["","ID","Name","Price","Set Base Price","Discount",""].map((h) => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {filtered.map((p) => (
               <tr key={p.id} style={{ borderBottom: "1px solid #f0e8e0", backgroundColor: selected.includes(p.id) ? "#fef3c7" : "white" }}>
                 <td style={styles.td_}><input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggleSelect(p.id)} /></td>
                 <td style={styles.td_}>{p.id}</td>
                 <td style={styles.td_}>{p.name}</td>
                 <td style={styles.td_}>₺{Number(p.price).toFixed(2)}</td>
+                <td style={styles.td_}>
+                  <SetPriceCell productId={p.id} basePrice={p.originalPrice ?? p.price} onSuccess={loadProducts} />
+                </td>
                 <td style={styles.td_}>{p.discountRate > 0 ? <span style={{ color: "#dc2626", fontWeight: 600 }}>-{p.discountRate}%</span> : <span style={{ color: "#9ca3af" }}>—</span>}</td>
                 <td style={styles.td_}>{p.discountRate > 0 && <button style={styles.rejectBtn} onClick={() => removeDiscount(p.id)}>Remove</button>}</td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
@@ -360,17 +423,24 @@ function RefundsPanel() {
 
   const fetch_ = () => {
     setLoading(true);
-    authFetch(`${BASE_URL}/refunds`).then((r) => r.json()).then((d) => setRefunds(Array.isArray(d) ? d : [])).finally(() => setLoading(false));
+    listAllRefunds()
+      .then((d) => setRefunds(Array.isArray(d) ? d : []))
+      .finally(() => setLoading(false));
   };
+
   useEffect(() => { fetch_(); }, []);
 
   const action = async (id, approve) => {
-    await authFetch(`${BASE_URL}/refunds/${id}/${approve ? "approve" : "reject"}`, { method: "PUT" });
+    if (approve) {
+      await approveRefund(id);
+    } else {
+      await rejectRefund(id);
+    }
     fetch_();
   };
 
   if (loading) return <Spinner />;
-  if (refunds.length === 0) return <Empty text="No pending refund requests." />;
+  if (refunds.length === 0) return <Empty text="No refund requests." />;
 
   return (
     <div style={styles.list}>
@@ -381,6 +451,9 @@ function RefundsPanel() {
             <span style={{ fontSize: 12, color: "#888" }}>Status: {r.status}</span>
           </div>
           <p style={styles.metaText}>Product: {r.productName}</p>
+          <p style={styles.metaText}>Customer: {r.customerName || "-"}</p>
+          <p style={styles.metaText}>Quantity: {r.quantity}</p>
+          {r.reason && <p style={styles.metaText}>Reason: {r.reason}</p>}
           <p style={styles.metaText}>Amount: ₺{Number(r.refundAmount).toFixed(2)}</p>
           <p style={styles.metaText}>Requested: {new Date(r.requestedAt).toLocaleDateString("tr-TR")}</p>
           {r.status === "PENDING" && (
@@ -407,6 +480,10 @@ function RevenuePanel() {
     authFetch(`${BASE_URL}/analytics/revenue?startDate=${startDate}&endDate=${endDate}`).then((r) => r.json()).then(setData).finally(() => setLoading(false));
   };
 
+  const totalRevenue = data?.totalRevenue ?? 0;
+  const totalCost = data?.totalCost ?? 0;
+  const netProfit = data?.netProfit ?? data?.profit ?? 0;
+
   return (
     <div>
       <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", alignItems: "flex-end" }}>
@@ -419,9 +496,9 @@ function RevenuePanel() {
         <div>
           <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
             {[
-              { label: "Total Revenue", value: `₺${Number(data.totalRevenue).toFixed(2)}`, color: "#16a34a" },
-              { label: "Total Cost", value: `₺${Number(data.totalCost).toFixed(2)}`, color: "#dc2626" },
-              { label: "Net Profit", value: `₺${Number(data.profit).toFixed(2)}`, color: data.profit >= 0 ? "#2563eb" : "#dc2626" },
+              { label: "Total Revenue", value: `₺${Number(totalRevenue).toFixed(2)}`, color: "#16a34a" },
+              { label: "Total Cost", value: `₺${Number(totalCost).toFixed(2)}`, color: "#dc2626" },
+              { label: "Net Profit", value: `₺${Number(netProfit).toFixed(2)}`, color: netProfit >= 0 ? "#2563eb" : "#dc2626" },
             ].map((s) => (
               <div key={s.label} style={{ ...styles.statCard, color: s.color }}>
                 <p style={{ margin: 0, fontSize: 13, color: "#777" }}>{s.label}</p>
@@ -429,30 +506,281 @@ function RevenuePanel() {
               </div>
             ))}
           </div>
-          {data.dataPoints?.length > 0 && (
-            <div style={styles.chartWrap}>
-              <h3 style={{ color: "#4b2e2e", marginTop: 0 }}>Daily Revenue</h3>
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 160, overflowX: "auto" }}>
-                {data.dataPoints.map((dp) => {
-                  const maxRevenue = Math.max(...data.dataPoints.map((d) => d.revenue));
-                  const height = maxRevenue > 0 ? (dp.revenue / maxRevenue) * 140 : 0;
-                  return (
-                    <div key={dp.date} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                      <span style={{ fontSize: 10, color: "#555" }}>₺{Math.round(dp.revenue)}</span>
-                      <div style={{ width: 28, height, backgroundColor: "#6b4f3b", borderRadius: "4px 4px 0 0", minHeight: 2 }} />
-                      <span style={{ fontSize: 9, color: "#888", transform: "rotate(-45deg)", transformOrigin: "top left", whiteSpace: "nowrap" }}>{dp.date?.slice(5)}</span>
-                    </div>
-                  );
-                })}
+          {data.dataPoints?.length > 0 && (() => {
+            const PLOT_HEIGHT = 150; // px the tallest bar may occupy
+            const maxRevenue = Math.max(...data.dataPoints.map((d) => d.revenue), 0);
+            return (
+              <div style={styles.chartWrap}>
+                <h3 style={{ color: "#4b2e2e", marginTop: 0, marginBottom: 16 }}>Daily Revenue</h3>
+                {/* Bars align to the bottom; the column grows upward so the value
+                    label can never overlap the title, and the bar is capped at
+                    PLOT_HEIGHT regardless of how large a single day's revenue is. */}
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 10, overflowX: "auto", paddingTop: 8 }}>
+                  {data.dataPoints.map((dp) => {
+                    const barHeight = maxRevenue > 0 ? Math.round((dp.revenue / maxRevenue) * PLOT_HEIGHT) : 0;
+                    return (
+                      <div key={dp.date} style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "0 0 auto" }}>
+                        <span style={{ fontSize: 10, color: "#555", marginBottom: 4, whiteSpace: "nowrap" }}>₺{Math.round(dp.revenue)}</span>
+                        <div
+                          title={`${dp.date}: ₺${Number(dp.revenue).toFixed(2)}`}
+                          style={{ width: 30, height: barHeight, minHeight: 3, backgroundColor: "#6b4f3b", borderRadius: "4px 4px 0 0" }}
+                        />
+                        <span style={{ fontSize: 10, color: "#888", marginTop: 6, whiteSpace: "nowrap" }}>{dp.date?.slice(5)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
     </div>
   );
 }
 
+
+
+function SetPriceCell({ productId, basePrice, onSuccess }) {
+  const [newPrice, setNewPrice] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSet = async () => {
+    const p = parseFloat(newPrice);
+    if (isNaN(p) || p <= 0) { alert('Enter a valid price.'); return; }
+    setSaving(true);
+    try {
+      const res = await authFetch(`${BASE_URL}/products/${productId}/price`, {
+        method: 'PUT',
+        body: JSON.stringify({ price: p })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || err.message || 'Could not update price.');
+        return;
+      }
+      setNewPrice('');
+      if (onSuccess) onSuccess();
+    } catch {
+      alert('Could not update price.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+      <input
+        type='number'
+        min={0}
+        step='0.01'
+        placeholder={Number(basePrice).toFixed(2)}
+        value={newPrice}
+        onChange={(e) => setNewPrice(e.target.value)}
+        style={{ width: 80, padding: '4px 6px', borderRadius: 6, border: '1px solid #d1c7bc', fontSize: 13 }}
+      />
+      <button style={styles.actionBtn} onClick={handleSet} disabled={saving}>
+        {saving ? '...' : 'Set'}
+      </button>
+    </div>
+  );
+}
+function AddProductPanel() {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({
+    name: '', model: '', serialNumber: '', description: '',
+    quantityInStock: '', price: '', warrantyStatus: '', distributorInfo: '',
+    imageUrl: '', categoryId: ''
+  });
+
+  useEffect(() => {
+    fetch(`${BASE_URL}/categories`)
+      .then((r) => r.json())
+      .then((d) => setCategories(Array.isArray(d) ? d : []));
+  }, []);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    setError(''); setSuccess('');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.price || !form.categoryId) {
+      setError('Name, price and category are required.'); return;
+    }
+    setLoading(true);
+    try {
+      const res = await authFetch(`${BASE_URL}/products`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...form,
+          price: parseFloat(form.price),
+          quantityInStock: parseInt(form.quantityInStock) || 0,
+          categoryId: parseInt(form.categoryId)
+        })
+      });
+      if (!res.ok) throw new Error('Failed');
+      setSuccess('Product added successfully!');
+      setForm({ name: '', model: '', serialNumber: '', description: '', quantityInStock: '', price: '', warrantyStatus: '', distributorInfo: '', imageUrl: '', categoryId: '' });
+    } catch {
+      setError('Could not add product. Check all fields.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fields = [
+    { name: 'name', label: 'Book Title *', placeholder: 'e.g. The Great Gatsby' },
+    { name: 'model', label: 'Edition / Model', placeholder: 'e.g. 1st Edition' },
+    { name: 'serialNumber', label: 'ISBN', placeholder: 'e.g. 9780743273565' },
+    { name: 'price', label: 'Price (₺) *', placeholder: 'e.g. 29.99', type: 'number' },
+    { name: 'quantityInStock', label: 'Stock Quantity', placeholder: 'e.g. 50', type: 'number' },
+    { name: 'warrantyStatus', label: 'Warranty Status', placeholder: 'e.g. No warranty' },
+    { name: 'distributorInfo', label: 'Publisher / Distributor', placeholder: 'e.g. Scribner' },
+    { name: 'imageUrl', label: 'Image URL', placeholder: 'https://...' },
+  ];
+
+  return (
+    <div>
+      <h2 style={{ color: '#4b2e2e', marginTop: 0, marginBottom: 20 }}>Add New Product</h2>
+      {success && <p style={{ color: '#16a34a', marginBottom: 16, fontWeight: 600 }}>✓ {success}</p>}
+      {error   && <p style={{ color: '#dc2626', marginBottom: 16 }}>✗ {error}</p>}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        {fields.map((f) => (
+          <div key={f.name}>
+            <label style={styles.label}>{f.label}</label>
+            <input
+              type={f.type || 'text'}
+              name={f.name}
+              placeholder={f.placeholder}
+              value={form[f.name]}
+              onChange={handleChange}
+              style={{ ...styles.input, width: '100%', boxSizing: 'border-box' }}
+            />
+          </div>
+        ))}
+        <div>
+          <label style={styles.label}>Category *</label>
+          <select
+            name='categoryId'
+            value={form.categoryId}
+            onChange={handleChange}
+            style={{ ...styles.input, width: '100%', boxSizing: 'border-box' }}
+          >
+            <option value=''>Select a category...</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label style={styles.label}>Description</label>
+          <textarea
+            name='description'
+            placeholder='Brief description of the book...'
+            value={form.description}
+            onChange={handleChange}
+            rows={3}
+            style={{ ...styles.input, width: '100%', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'Arial, sans-serif' }}
+          />
+        </div>
+      </div>
+      <div style={{ marginTop: 20 }}>
+        <button style={styles.btn} onClick={handleSubmit} disabled={loading}>
+          {loading ? 'Adding...' : '+ Add Product'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AddCategoryPanel() {
+  const [name, setName] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+
+  const fetchCategories = () => {
+    fetch(`${BASE_URL}/categories`)
+      .then((r) => r.json())
+      .then((d) => setCategories(Array.isArray(d) ? d : []));
+  };
+
+  useEffect(() => { fetchCategories(); }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) { setError('Category name is required.'); return; }
+    setLoading(true);
+    try {
+      const res = await authFetch(`${BASE_URL}/categories`, {
+        method: 'POST',
+        body: JSON.stringify({ name: name.trim() })
+      });
+      if (!res.ok) throw new Error('Failed');
+      setSuccess(`Category '${name}' added!`);
+      setName('');
+      fetchCategories();
+    } catch {
+      setError('Could not add category.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteCategory = async (id, catName) => {
+    if (!window.confirm(`Delete category '${catName}'?`)) return;
+    await authFetch(`${BASE_URL}/categories/${id}`, { method: 'DELETE' });
+    fetchCategories();
+  };
+
+  return (
+    <div>
+      <h2 style={{ color: '#4b2e2e', marginTop: 0, marginBottom: 20 }}>Add New Category</h2>
+      {success && <p style={{ color: '#16a34a', marginBottom: 12, fontWeight: 600 }}>✓ {success}</p>}
+      {error   && <p style={{ color: '#dc2626', marginBottom: 12 }}>✗ {error}</p>}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 32, alignItems: 'flex-end' }}>
+        <div style={{ flex: 1 }}>
+          <label style={styles.label}>Category Name *</label>
+          <input
+            type='text'
+            placeholder='e.g. Science Fiction'
+            value={name}
+            onChange={(e) => { setName(e.target.value); setError(''); setSuccess(''); }}
+            style={{ ...styles.input, width: '100%', boxSizing: 'border-box' }}
+          />
+        </div>
+        <button style={styles.btn} onClick={handleSubmit} disabled={loading}>
+          {loading ? 'Adding...' : '+ Add Category'}
+        </button>
+      </div>
+
+      <h3 style={{ color: '#4b2e2e', marginBottom: 12 }}>Existing Categories</h3>
+      {categories.length === 0 ? (
+        <Empty text='No categories yet.' />
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {categories.map((c) => (
+            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#f8f4ee', border: '1px solid #e5d9d0', borderRadius: 8, padding: '8px 14px' }}>
+              <span style={{ fontWeight: 600, color: '#4b2e2e' }}>{c.name}</span>
+              <button
+                style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}
+                onClick={() => deleteCategory(c.id, c.name)}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 function Spinner() { return <div style={{ textAlign: "center", padding: 40, color: "#6b4f3b" }}>Loading...</div>; }
 function Empty({ text }) { return <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>{text}</div>; }
 
@@ -481,43 +809,8 @@ const styles = {
   center: { textAlign: "center", paddingTop: 80, color: "#555" },
   statCard: { flex: 1, minWidth: 160, backgroundColor: "white", borderRadius: 12, padding: "16px 20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: "1px solid #f0e8e0" },
   chartWrap: { backgroundColor: "#fdfaf7", borderRadius: 12, padding: "20px 24px", border: "1px solid #f0e8e0" },
-  searchInput: {
-    padding: "10px 12px",
-    borderRadius: 8,
-    border: "1px solid #d1c7bc",
-    fontSize: 14,
-    outline: "none",
-    minWidth: 260,
-  },
-  discountInputWrapper: {
-    display: "flex",
-    alignItems: "center",
-    border: "1px solid #d1c7bc",
-    borderRadius: 8,
-    backgroundColor: "white",
-    height: 48,
-    minWidth: 180,
-    overflow: "hidden",
-  },
-
-  percentPrefix: {
-    padding: "0 12px",
-    fontSize: 16,
-    color: "#4b2e2e",
-    fontWeight: 600,
-    borderRight: "1px solid #e5d9ce",
-    height: "100%",
-    display: "flex",
-    alignItems: "center",
-    backgroundColor: "#f8f3ee",
-  },
-
-  discountInput: {
-    border: "none",
-    outline: "none",
-    padding: "10px 12px",
-    fontSize: 14,
-    width: "100%",
-    minWidth: 120,
-  },
+  discountBar: { display: "flex", gap: 16, alignItems: "flex-end", marginBottom: 8, flexWrap: "wrap" },
+  percentField: { display: "flex", alignItems: "center", border: "1px solid #d1c7bc", borderRadius: 8, overflow: "hidden", backgroundColor: "white" },
+  percentInput: { width: 80, padding: "10px 12px", border: "none", outline: "none", fontSize: 16, fontWeight: 600, textAlign: "right" },
+  percentSuffix: { padding: "10px 14px 10px 4px", fontSize: 16, fontWeight: 600, color: "#6b4f3b", backgroundColor: "#f8f4ee", borderLeft: "1px solid #ece2d8" },
 };

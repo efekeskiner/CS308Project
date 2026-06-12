@@ -25,6 +25,7 @@ class ReviewServiceTest {
       @Mock private ReviewRepository reviewRepository;
       @Mock private ProductRepository productRepository;
       @Mock private OrderRepository orderRepository;
+      @Mock private DeliveryRepository deliveryRepository;
 
       @InjectMocks
       private ReviewService reviewService;
@@ -63,7 +64,7 @@ class ReviewServiceTest {
                 RatingRequest req = new RatingRequest();
                 req.setScore(5);
 
-                when(orderRepository.existsDeliveredOrderForUserAndProduct(1L, 10L))
+                when(deliveryRepository.existsByCustomerIdAndProductIdAndIsCompletedTrue(1L, 10L))
                         .thenReturn(false);
 
                 assertThrows(ResponseStatusException.class,
@@ -77,7 +78,7 @@ class ReviewServiceTest {
                 RatingRequest req = new RatingRequest();
                 req.setScore(7);
 
-                when(orderRepository.existsDeliveredOrderForUserAndProduct(1L, 10L))
+                when(deliveryRepository.existsByCustomerIdAndProductIdAndIsCompletedTrue(1L, 10L))
                         .thenReturn(true);
                 when(productRepository.findById(10L)).thenReturn(Optional.empty());
 
@@ -96,7 +97,7 @@ class ReviewServiceTest {
                 RatingRequest req = new RatingRequest();
                 req.setScore(8);
 
-                when(orderRepository.existsDeliveredOrderForUserAndProduct(1L, 10L))
+                when(deliveryRepository.existsByCustomerIdAndProductIdAndIsCompletedTrue(1L, 10L))
                         .thenReturn(true);
                 when(productRepository.findById(10L)).thenReturn(Optional.of(product));
                 when(reviewRepository.findByUserIdAndProductId(1L, 10L))

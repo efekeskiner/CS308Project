@@ -3,9 +3,10 @@ package com.bookstore.controller;
 import com.bookstore.dto.DeliveryDto;
 import com.bookstore.dto.DeliveryStatusRequest;
 import com.bookstore.service.DeliveryService;
-import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -22,10 +23,8 @@ public class DeliveryController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<DeliveryDto>> list(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(deliveryService.list(page, size));
+    public ResponseEntity<List<DeliveryDto>> list() {
+        return ResponseEntity.ok(deliveryService.list());
     }
 
     @PutMapping("/{id}/status")
