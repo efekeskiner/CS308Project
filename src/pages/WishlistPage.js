@@ -99,9 +99,36 @@ const styles = {
   title: { fontSize: "32px", marginBottom: "24px", color: "#4b2e2e" },
   emptyBox: { textAlign: "center", paddingTop: "60px" },
   empty: { fontSize: "18px", color: "#6b5b53", marginBottom: "16px" },
-  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px" },
-  card: { border: "1px solid #e5d9ce", padding: "16px", borderRadius: "12px", textAlign: "center", backgroundColor: "white", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" },
-  image: { width: "100%", height: "180px", objectFit: "cover", borderRadius: "8px" },
+  
+  grid: {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+  gap: "24px",
+},
+
+  card: {
+    border: "1px solid #e5d9ce",
+    padding: "20px",
+    borderRadius: "16px",
+    textAlign: "center",
+    backgroundColor: "white",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+    maxWidth: "320px",
+    width: "100%",
+    justifySelf: "center",
+  },
+
+  image: {
+    width: "100%",
+    height: "260px",
+    objectFit: "contain",
+    borderRadius: "8px",
+    border: "1px solid #eaded7",
+    backgroundColor: "white",
+    padding: "10px",
+    boxSizing: "border-box",
+  },
+  
   productName: { fontSize: "15px", fontWeight: 600, color: "#4b2e2e", margin: "10px 0 4px" },
   price: { color: "#6b4f3b", fontWeight: 700, marginBottom: "12px" },
   actions: { display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" },
