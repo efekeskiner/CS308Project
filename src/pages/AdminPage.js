@@ -312,6 +312,8 @@ function DiscountsPanel() {
     loadProducts().finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+
+
   const toggleSelect = (id) => setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
 
   const applyDiscount = async () => {
