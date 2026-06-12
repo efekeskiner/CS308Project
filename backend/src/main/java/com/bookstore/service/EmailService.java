@@ -107,4 +107,39 @@ public class EmailService {
             log.error("Unexpected error sending discount notification: {}", e.getMessage());
         }
     }
+
+    /**
+     * Notify a customer that their refund request has been approved by the sales
+     * manager (Req 15). Sent when the refund is authorized and the item returns
+     * to stock. Failures are logged and never break the approval flow.
+     */
+    @Async
+    public void sendRefundApprovedNotification(String toEmail, String customerName,
+                                               String productName, BigDecimal refundAmount) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(toEmail);
+            helper.setSubject("Your refund has been approved — Online Bookstore");
+            helper.setText(
+                "<div style='font-family:sans-serif;'>" +
+                "<h2>Good news, " + customerName + "!</h2>" +
+                "<p>Your refund request for <strong>" + productName + "</strong> has been approved.</p>" +
+                "<p>A refund of <strong>₺" + refundAmount.toPlainString() + "</strong> has been issued " +
+                "and the item has been returned to our stock.</p>" +
+                "<br/><p>— Online Bookstore Team</p>" +
+                "</div>",
+                true
+            );
+
+            mailSender.send(message);
+            log.info("Refund-approved notification sent to {} for product '{}'", toEmail, productName);
+
+        } catch (MessagingException e) {
+            log.error("Failed to send refund notification to {}: {}", toEmail, e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error sending refund notification: {}", e.getMessage());
+        }
+    }
 }

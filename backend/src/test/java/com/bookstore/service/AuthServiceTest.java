@@ -1,8 +1,14 @@
 package com.bookstore.service;
 
+import com.bookstore.dto.LoginRequest;
+import com.bookstore.dto.LoginResponse;
+import com.bookstore.dto.RegisterRequest;
+import com.bookstore.dto.RegisterResponse;
+import com.bookstore.dto.TokenRefreshResponse;
 import com.bookstore.model.Role;
 import com.bookstore.model.User;
 import com.bookstore.repository.UserRepository;
+import com.bookstore.security.JwtUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,89 +24,117 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-  class AuthServiceTest {
+class AuthServiceTest {
 
-    @Mock
-        private UserRepository userRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private JwtUtils jwtUtils;
 
-    @InjectMocks
-        private AuthService authService;
+    @InjectMocks private AuthService authService;
 
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     private User buildUser(long id, String email, String rawPassword, Role role) {
-              User user = new User();
-              ReflectionTestUtils.setField(user, "id", id);
-              user.setEmail(email);
-              user.setPassword(encoder.encode(rawPassword));
-              user.setRole(role);
-              return user;
+        User user = new User();
+        ReflectionTestUtils.setField(user, "id", id);
+        user.setName("Test User");
+        user.setEmail(email);
+        user.setPasswordHash(encoder.encode(rawPassword));
+        user.setRole(role);
+        return user;
+    }
+
+    private LoginRequest loginRequest(String email, String password) {
+        LoginRequest req = new LoginRequest();
+        req.setEmail(email);
+        req.setPassword(password);
+        return req;
     }
 
     @Test
-        void register_savesNewUser_whenEmailNotTaken() {
-                  when(userRepository.findByEmail("new@test.com")).thenReturn(Optional.empty());
-                  when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+    void register_savesNewUser_whenEmailNotTaken() {
+        RegisterRequest req = new RegisterRequest();
+        req.setName("Alice");
+        req.setEmail("new@test.com");
+        req.setPassword("secret123");
+        req.setTaxId("12345678901");
+        req.setHomeAddress("Somewhere 1");
 
-            User result = authService.register("new@test.com", "secret123", "Alice");
+        when(userRepository.findByEmail("new@test.com")).thenReturn(Optional.empty());
 
-            assertNotNull(result);
-                  assertEquals("new@test.com", result.getEmail());
-                  verify(userRepository).save(any(User.class));
-        }
+        RegisterResponse res = authService.register(req);
 
-    @Test
-        void register_throwsException_whenEmailAlreadyTaken() {
-                  User existing = buildUser(1L, "taken@test.com", "pass", Role.CUSTOMER);
-                  when(userRepository.findByEmail("taken@test.com")).thenReturn(Optional.of(existing));
-
-            assertThrows(RuntimeException.class,
-                                         () -> authService.register("taken@test.com", "pass", "Bob"));
-        }
+        assertNotNull(res);
+        assertEquals("new@test.com", res.getUser().getEmail());
+        assertEquals(Role.CUSTOMER, res.getUser().getRole());
+        verify(userRepository).save(any(User.class));
+    }
 
     @Test
-        void login_returnsUser_whenCredentialsAreValid() {
-                  User user = buildUser(1L, "user@test.com", "correct", Role.CUSTOMER);
-                  when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+    void register_throws_whenEmailAlreadyTaken() {
+        RegisterRequest req = new RegisterRequest();
+        req.setName("Bob");
+        req.setEmail("taken@test.com");
+        req.setPassword("secret123");
 
-            User result = authService.login("user@test.com", "correct");
+        when(userRepository.findByEmail("taken@test.com"))
+                .thenReturn(Optional.of(buildUser(1L, "taken@test.com", "x", Role.CUSTOMER)));
 
-            assertNotNull(result);
-                  assertEquals("user@test.com", result.getEmail());
-        }
-
-    @Test
-        void login_throwsException_whenPasswordIsWrong() {
-                  User user = buildUser(1L, "user@test.com", "correct", Role.CUSTOMER);
-                  when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
-
-            assertThrows(RuntimeException.class,
-                                         () -> authService.login("user@test.com", "wrongpassword"));
-        }
+        assertThrows(AuthService.EmailAlreadyExistsException.class,
+                () -> authService.register(req));
+        verify(userRepository, never()).save(any());
+    }
 
     @Test
-        void login_throwsException_whenEmailNotFound() {
-                  when(userRepository.findByEmail("ghost@test.com")).thenReturn(Optional.empty());
+    void login_returnsTokens_whenCredentialsValid() {
+        User user = buildUser(1L, "user@test.com", "correct", Role.CUSTOMER);
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        when(jwtUtils.generateAccessToken(any(), any(), any())).thenReturn("access-token");
+        when(jwtUtils.generateRefreshToken(any())).thenReturn("refresh-token");
 
-            assertThrows(RuntimeException.class,
-                                         () -> authService.login("ghost@test.com", "any"));
-        }
+        LoginResponse res = authService.login(loginRequest("user@test.com", "correct"));
 
-    @Test
-        void getUserById_returnsUser_whenExists() {
-                  User user = buildUser(5L, "five@test.com", "pw", Role.CUSTOMER);
-                  when(userRepository.findById(5L)).thenReturn(Optional.of(user));
-
-            User result = authService.getUserById(5L);
-
-            assertNotNull(result);
-                  assertEquals("five@test.com", result.getEmail());
-        }
+        assertEquals("access-token", res.getAccessToken());
+        assertEquals("refresh-token", res.getRefreshToken());
+        assertEquals("user@test.com", res.getUser().getEmail());
+    }
 
     @Test
-        void getUserById_throwsException_whenNotFound() {
-                  when(userRepository.findById(99L)).thenReturn(Optional.empty());
+    void login_throws_whenPasswordWrong() {
+        User user = buildUser(1L, "user@test.com", "correct", Role.CUSTOMER);
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
 
-            assertThrows(RuntimeException.class, () -> authService.getUserById(99L));
-        }
-  }
+        assertThrows(AuthService.InvalidCredentialsException.class,
+                () -> authService.login(loginRequest("user@test.com", "wrongpassword")));
+    }
+
+    @Test
+    void login_throws_whenEmailNotFound() {
+        when(userRepository.findByEmail("ghost@test.com")).thenReturn(Optional.empty());
+
+        assertThrows(AuthService.InvalidCredentialsException.class,
+                () -> authService.login(loginRequest("ghost@test.com", "any")));
+    }
+
+    @Test
+    void refresh_issuesNewTokens_whenRefreshTokenValid() {
+        User user = buildUser(1L, "user@test.com", "pw", Role.CUSTOMER);
+        when(jwtUtils.validateToken("good-refresh")).thenReturn(true);
+        when(jwtUtils.getEmailFromToken("good-refresh")).thenReturn("user@test.com");
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        when(jwtUtils.generateAccessToken(any(), any(), any())).thenReturn("new-access");
+        when(jwtUtils.generateRefreshToken(any())).thenReturn("new-refresh");
+
+        TokenRefreshResponse res = authService.refresh("good-refresh");
+
+        assertEquals("new-access", res.getAccessToken());
+        assertEquals("new-refresh", res.getRefreshToken());
+    }
+
+    @Test
+    void refresh_throws_whenRefreshTokenInvalid() {
+        when(jwtUtils.validateToken("bad-token")).thenReturn(false);
+
+        assertThrows(AuthService.TokenRefreshException.class,
+                () -> authService.refresh("bad-token"));
+    }
+}

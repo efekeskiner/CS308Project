@@ -125,19 +125,10 @@ function ProductCard({ product, onAddToCart, isAdded }) {
   const discountedPrice = hasDiscount
     ? originalPrice * (1 - discountRate / 100)
     : originalPrice;
-  const getBookImage = (product) => {
-    if (product.imageUrl) {
-      return product.imageUrl;
-    }
-
-    if (product.serialNumber) {
-      return `https://covers.openlibrary.org/b/isbn/${product.serialNumber}-L.jpg`;
-    }
-
-    return FALLBACK_IMAGE;
-  };
-
-  const imageSrc = getBookImage(product);
+  // Cover images come from the product's own imageUrl column (served from
+  // /public/images/books). The local SVG is only used if that is missing or
+  // fails to load — we no longer reach out to any third-party cover API.
+  const imageSrc = product.imageUrl || FALLBACK_IMAGE;
 
   return (
     <div style={styles.card} onClick={handleCardClick}>

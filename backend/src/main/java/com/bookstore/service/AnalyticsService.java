@@ -30,7 +30,8 @@ import java.util.Map;
  *
  * Revenue is the sum of {@code order_items.unit_price * quantity} over non-CANCELLED
  * orders created in the requested range. The schema has no per-product cost column,
- * so cost is estimated as {@code revenue * costRatio}, configurable via
+ * so cost is estimated as {@code original_unit_price * quantity * costRatio} — half of
+ * the ORIGINAL (list) price, not the discounted price paid — configurable via
  * {@code app.analytics.cost-ratio} (default 0.5). APPROVED refunds subtract from
  * revenue and profit on the day the original order was placed (not the resolution date).
  * Daily data points are zero-filled across the whole range so the chart has a bar for every day.
@@ -75,8 +76,12 @@ public class AnalyticsService {
         for (Order o : orders) {
             BigDecimal[] bucket = byDay.get(o.getCreatedAt().toLocalDate());
             for (OrderItem item : o.getItems()) {
-                BigDecimal lineRevenue = item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-                BigDecimal lineCost = lineRevenue.multiply(costRatio).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal qty = BigDecimal.valueOf(item.getQuantity());
+                BigDecimal lineRevenue = item.getUnitPrice().multiply(qty);
+                // Cost is half of the ORIGINAL (list) price, not the discounted price the
+                // customer paid — so a discount eats into profit rather than the cost basis.
+                BigDecimal lineCost = item.getOriginalUnitPrice().multiply(qty)
+                        .multiply(costRatio).setScale(2, RoundingMode.HALF_UP);
                 totalRevenue = totalRevenue.add(lineRevenue);
                 totalCost = totalCost.add(lineCost);
                 if (bucket != null) {
@@ -88,13 +93,23 @@ public class AnalyticsService {
 
         // APPROVED refunds reduce revenue & profit on the day the original order was placed.
         BigDecimal totalRefunds = BigDecimal.ZERO;
+        BigDecimal totalRefundCostRecovery = BigDecimal.ZERO;
         Map<LocalDate, BigDecimal> refundByDay = new HashMap<>();
+        Map<LocalDate, BigDecimal> refundCostRecoveryByDay = new HashMap<>();
         List<RefundRequest> refunds = refundRequestRepository
                 .findApprovedByOrderCreatedAtBetween(RefundStatus.APPROVED, start, end);
         for (RefundRequest r : refunds) {
+            OrderItem oi = r.getOrderItem();
+            // When a refund is approved the product returns to stock, recovering the cost
+            // that was originally booked for it — half of the ORIGINAL price, not the refund.
+            BigDecimal costRecovery = oi.getOriginalUnitPrice()
+                    .multiply(BigDecimal.valueOf(oi.getQuantity()))
+                    .multiply(costRatio).setScale(2, RoundingMode.HALF_UP);
             totalRefunds = totalRefunds.add(r.getRefundAmount());
-            LocalDate orderDate = r.getOrderItem().getOrder().getCreatedAt().toLocalDate();
+            totalRefundCostRecovery = totalRefundCostRecovery.add(costRecovery);
+            LocalDate orderDate = oi.getOrder().getCreatedAt().toLocalDate();
             refundByDay.merge(orderDate, r.getRefundAmount(), BigDecimal::add);
+            refundCostRecoveryByDay.merge(orderDate, costRecovery, BigDecimal::add);
         }
 
         DateTimeFormatter fmt = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -104,9 +119,8 @@ public class AnalyticsService {
             BigDecimal dayCost = e.getValue()[1];
             BigDecimal dayRefund = refundByDay.getOrDefault(e.getKey(), BigDecimal.ZERO);
             BigDecimal netRevenue = dayRevenue.subtract(dayRefund);
-            // When a refund is approved the product returns to stock, recovering its cost.
-            // Net profit impact of refund = refundAmount × (1 − costRatio), not the full amount.
-            BigDecimal refundCostRecovery = dayRefund.multiply(costRatio).setScale(2, RoundingMode.HALF_UP);
+            // Net profit impact of a refund = refundAmount − recovered cost (half of original price).
+            BigDecimal refundCostRecovery = refundCostRecoveryByDay.getOrDefault(e.getKey(), BigDecimal.ZERO);
             BigDecimal netProfit = dayRevenue.subtract(dayCost).subtract(dayRefund).add(refundCostRecovery);
             points.add(new RevenueDataPoint(
                     e.getKey().format(fmt),
@@ -116,7 +130,6 @@ public class AnalyticsService {
 
         BigDecimal netTotalRevenue = totalRevenue.subtract(totalRefunds).setScale(2, RoundingMode.HALF_UP);
         BigDecimal netTotalCost = totalCost.setScale(2, RoundingMode.HALF_UP);
-        BigDecimal totalRefundCostRecovery = totalRefunds.multiply(costRatio).setScale(2, RoundingMode.HALF_UP);
         BigDecimal netProfit = totalRevenue.subtract(totalCost).subtract(totalRefunds).add(totalRefundCostRecovery).setScale(2, RoundingMode.HALF_UP);
 
         return new RevenueReport(startDate.format(fmt), endDate.format(fmt),

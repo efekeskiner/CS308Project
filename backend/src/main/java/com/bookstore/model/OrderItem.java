@@ -26,13 +26,27 @@ public class OrderItem {
     @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
 
+    /**
+     * The product's original (list) price at order time, before any discount.
+     * Snapshotted so analytics can derive cost from the list price rather than
+     * the discounted price the customer actually paid (cost = half of original).
+     */
+    @Column(name = "original_unit_price", precision = 10, scale = 2)
+    private BigDecimal originalUnitPrice;
+
     public OrderItem() {}
 
     public OrderItem(Order order, Product product, Integer quantity, BigDecimal unitPrice) {
+        this(order, product, quantity, unitPrice, unitPrice);
+    }
+
+    public OrderItem(Order order, Product product, Integer quantity,
+                     BigDecimal unitPrice, BigDecimal originalUnitPrice) {
         this.order = order;
         this.product = product;
         this.quantity = quantity;
         this.unitPrice = unitPrice;
+        this.originalUnitPrice = originalUnitPrice;
     }
 
     public Long getId() { return id; }
@@ -41,8 +55,14 @@ public class OrderItem {
     public Integer getQuantity() { return quantity; }
     public BigDecimal getUnitPrice() { return unitPrice; }
 
+    /** Original list price at order time; falls back to unitPrice for legacy rows. */
+    public BigDecimal getOriginalUnitPrice() {
+        return originalUnitPrice != null ? originalUnitPrice : unitPrice;
+    }
+
     public void setOrder(Order order) { this.order = order; }
     public void setProduct(Product product) { this.product = product; }
     public void setQuantity(Integer quantity) { this.quantity = quantity; }
     public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; }
+    public void setOriginalUnitPrice(BigDecimal originalUnitPrice) { this.originalUnitPrice = originalUnitPrice; }
 }

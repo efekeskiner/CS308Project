@@ -303,6 +303,7 @@ function DiscountsPanel() {
   const [rate, setRate] = useState("");
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
+  const [search, setSearch] = useState("");
 
   const loadProducts = () =>
     fetch(`${BASE_URL}/products?size=100`).then((r) => r.json()).then((d) => setProducts(d.content ?? d));
@@ -328,32 +329,80 @@ function DiscountsPanel() {
 
   if (loading) return <Spinner />;
 
+  const query = search.trim().toLowerCase();
+  const filtered = query
+    ? products.filter((p) => (p.name || "").toLowerCase().includes(query))
+    : products;
+
+  const ratePreview = (() => {
+    const r = parseFloat(rate);
+    if (isNaN(r) || r <= 0) return null;
+    return `A ₺100.00 book would become ₺${(100 * (1 - r / 100)).toFixed(2)}.`;
+  })();
+
   return (
     <div>
       {msg && <p style={{ color: "#16a34a", marginBottom: 16 }}>{msg}</p>}
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
-        <input type="number" min={1} max={100} placeholder="Discount % (e.g. 20)" style={styles.input} value={rate} onChange={(e) => setRate(e.target.value)} />
-        <button style={styles.approveBtn} onClick={applyDiscount}>Apply to Selected</button>
+
+      {/* Discount controls — the rate is always a percentage off the base price */}
+      <div style={styles.discountBar}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={styles.label}>Discount rate</label>
+          <div style={styles.percentField}>
+            <input
+              type="number"
+              min={1}
+              max={90}
+              placeholder="20"
+              style={styles.percentInput}
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
+            />
+            <span style={styles.percentSuffix}>%</span>
+          </div>
+        </div>
+        <button style={{ ...styles.approveBtn, padding: "10px 18px" }} onClick={applyDiscount}>
+          Apply to Selected
+        </button>
         <span style={{ color: "#777", fontSize: 13 }}>{selected.length} selected</span>
       </div>
-      <table style={styles.table}>
-        <thead><tr>{["","ID","Name","Price","Set Base Price","Discount",""].map((h) => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
-        <tbody>
-          {products.map((p) => (
-            <tr key={p.id} style={{ borderBottom: "1px solid #f0e8e0", backgroundColor: selected.includes(p.id) ? "#fef3c7" : "white" }}>
-              <td style={styles.td_}><input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggleSelect(p.id)} /></td>
-              <td style={styles.td_}>{p.id}</td>
-              <td style={styles.td_}>{p.name}</td>
-              <td style={styles.td_}>₺{Number(p.price).toFixed(2)}</td>
-              <td style={styles.td_}>
-                <SetPriceCell productId={p.id} basePrice={p.originalPrice ?? p.price} onSuccess={loadProducts} />
-              </td>
-              <td style={styles.td_}>{p.discountRate > 0 ? <span style={{ color: "#dc2626", fontWeight: 600 }}>-{p.discountRate}%</span> : <span style={{ color: "#9ca3af" }}>—</span>}</td>
-              <td style={styles.td_}>{p.discountRate > 0 && <button style={styles.rejectBtn} onClick={() => removeDiscount(p.id)}>Remove</button>}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <p style={{ margin: "0 0 20px", fontSize: 12, color: "#8a7d72" }}>
+        Sets the price to <strong>base price × (1 − rate ÷ 100)</strong>.
+        {ratePreview ? ` ${ratePreview}` : " Enter a whole percentage between 1 and 90."}
+      </p>
+
+      <div style={{ marginBottom: 16 }}>
+        <input
+          type="text"
+          placeholder="🔍 Search products by name…"
+          style={{ ...styles.input, width: "100%", maxWidth: 360, boxSizing: "border-box" }}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {filtered.length === 0 ? (
+        <Empty text={query ? `No products match “${search}”.` : "No products found."} />
+      ) : (
+        <table style={styles.table}>
+          <thead><tr>{["","ID","Name","Price","Set Base Price","Discount",""].map((h) => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {filtered.map((p) => (
+              <tr key={p.id} style={{ borderBottom: "1px solid #f0e8e0", backgroundColor: selected.includes(p.id) ? "#fef3c7" : "white" }}>
+                <td style={styles.td_}><input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggleSelect(p.id)} /></td>
+                <td style={styles.td_}>{p.id}</td>
+                <td style={styles.td_}>{p.name}</td>
+                <td style={styles.td_}>₺{Number(p.price).toFixed(2)}</td>
+                <td style={styles.td_}>
+                  <SetPriceCell productId={p.id} basePrice={p.originalPrice ?? p.price} onSuccess={loadProducts} />
+                </td>
+                <td style={styles.td_}>{p.discountRate > 0 ? <span style={{ color: "#dc2626", fontWeight: 600 }}>-{p.discountRate}%</span> : <span style={{ color: "#9ca3af" }}>—</span>}</td>
+                <td style={styles.td_}>{p.discountRate > 0 && <button style={styles.rejectBtn} onClick={() => removeDiscount(p.id)}>Remove</button>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
@@ -447,24 +496,33 @@ function RevenuePanel() {
               </div>
             ))}
           </div>
-          {data.dataPoints?.length > 0 && (
-            <div style={styles.chartWrap}>
-              <h3 style={{ color: "#4b2e2e", marginTop: 0 }}>Daily Revenue</h3>
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 160, overflowX: "auto" }}>
-                {data.dataPoints.map((dp) => {
-                  const maxRevenue = Math.max(...data.dataPoints.map((d) => d.revenue));
-                  const height = maxRevenue > 0 ? (dp.revenue / maxRevenue) * 140 : 0;
-                  return (
-                    <div key={dp.date} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                      <span style={{ fontSize: 10, color: "#555" }}>₺{Math.round(dp.revenue)}</span>
-                      <div style={{ width: 28, height, backgroundColor: "#6b4f3b", borderRadius: "4px 4px 0 0", minHeight: 2 }} />
-                      <span style={{ fontSize: 9, color: "#888", transform: "rotate(-45deg)", transformOrigin: "top left", whiteSpace: "nowrap" }}>{dp.date?.slice(5)}</span>
-                    </div>
-                  );
-                })}
+          {data.dataPoints?.length > 0 && (() => {
+            const PLOT_HEIGHT = 150; // px the tallest bar may occupy
+            const maxRevenue = Math.max(...data.dataPoints.map((d) => d.revenue), 0);
+            return (
+              <div style={styles.chartWrap}>
+                <h3 style={{ color: "#4b2e2e", marginTop: 0, marginBottom: 16 }}>Daily Revenue</h3>
+                {/* Bars align to the bottom; the column grows upward so the value
+                    label can never overlap the title, and the bar is capped at
+                    PLOT_HEIGHT regardless of how large a single day's revenue is. */}
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 10, overflowX: "auto", paddingTop: 8 }}>
+                  {data.dataPoints.map((dp) => {
+                    const barHeight = maxRevenue > 0 ? Math.round((dp.revenue / maxRevenue) * PLOT_HEIGHT) : 0;
+                    return (
+                      <div key={dp.date} style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "0 0 auto" }}>
+                        <span style={{ fontSize: 10, color: "#555", marginBottom: 4, whiteSpace: "nowrap" }}>₺{Math.round(dp.revenue)}</span>
+                        <div
+                          title={`${dp.date}: ₺${Number(dp.revenue).toFixed(2)}`}
+                          style={{ width: 30, height: barHeight, minHeight: 3, backgroundColor: "#6b4f3b", borderRadius: "4px 4px 0 0" }}
+                        />
+                        <span style={{ fontSize: 10, color: "#888", marginTop: 6, whiteSpace: "nowrap" }}>{dp.date?.slice(5)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
     </div>
@@ -741,4 +799,8 @@ const styles = {
   center: { textAlign: "center", paddingTop: 80, color: "#555" },
   statCard: { flex: 1, minWidth: 160, backgroundColor: "white", borderRadius: 12, padding: "16px 20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: "1px solid #f0e8e0" },
   chartWrap: { backgroundColor: "#fdfaf7", borderRadius: 12, padding: "20px 24px", border: "1px solid #f0e8e0" },
+  discountBar: { display: "flex", gap: 16, alignItems: "flex-end", marginBottom: 8, flexWrap: "wrap" },
+  percentField: { display: "flex", alignItems: "center", border: "1px solid #d1c7bc", borderRadius: 8, overflow: "hidden", backgroundColor: "white" },
+  percentInput: { width: 80, padding: "10px 12px", border: "none", outline: "none", fontSize: 16, fontWeight: 600, textAlign: "right" },
+  percentSuffix: { padding: "10px 14px 10px 4px", fontSize: 16, fontWeight: 600, color: "#6b4f3b", backgroundColor: "#f8f4ee", borderLeft: "1px solid #ece2d8" },
 };

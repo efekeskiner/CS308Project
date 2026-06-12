@@ -26,13 +26,16 @@ public class RefundService {
     private final RefundRequestRepository refundRepository;
     private final OrderItemRepository orderItemRepository;
     private final ProductRepository productRepository;
+    private final EmailService emailService;
 
     public RefundService(RefundRequestRepository refundRepository,
                          OrderItemRepository orderItemRepository,
-                         ProductRepository productRepository) {
+                         ProductRepository productRepository,
+                         EmailService emailService) {
         this.refundRepository = refundRepository;
         this.orderItemRepository = orderItemRepository;
         this.productRepository = productRepository;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -121,7 +124,16 @@ public class RefundService {
         refund.setStatus(RefundStatus.APPROVED);
         refund.setResolvedAt(LocalDateTime.now());
         refund.setResolver(resolver);
-        return new RefundDto(refundRepository.save(refund));
+        RefundDto dto = new RefundDto(refundRepository.save(refund));
+
+        // Notify the customer that their refund was authorized (Req 15 / demo Step 6).
+        emailService.sendRefundApprovedNotification(
+                refund.getUser().getEmail(),
+                refund.getUser().getName(),
+                product.getName(),
+                refund.getRefundAmount());
+
+        return dto;
     }
 
     @Transactional

@@ -1,7 +1,11 @@
 package com.bookstore.service;
 
-import com.bookstore.model.Discount;
-import com.bookstore.repository.DiscountRepository;
+import com.bookstore.dto.ApplyDiscountRequest;
+import com.bookstore.model.Product;
+import com.bookstore.model.User;
+import com.bookstore.model.Wishlist;
+import com.bookstore.repository.ProductRepository;
+import com.bookstore.repository.WishlistRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -10,103 +14,106 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-  class DiscountServiceTest {
+class DiscountServiceTest {
 
-    @Mock
-        private DiscountRepository discountRepository;
+    @Mock private ProductRepository productRepository;
+    @Mock private WishlistRepository wishlistRepository;
+    @Mock private EmailService emailService;
 
-    @InjectMocks
-        private DiscountService discountService;
+    @InjectMocks private DiscountService discountService;
 
-    @Test
-        void createDiscount_savesAndReturnsDiscount() {
-                  Discount discount = new Discount();
-                  discount.setCode("SAVE10");
-                  discount.setPercentage(BigDecimal.valueOf(10));
-                  discount.setActive(true);
-                  discount.setExpiryDate(LocalDateTime.now().plusDays(7));
+    private Product product(long id, String price) {
+        Product p = new Product();
+        ReflectionTestUtils.setField(p, "id", id);
+        p.setName("Dune");
+        BigDecimal val = new BigDecimal(price);
+        p.setPrice(val);
+        p.setOriginalPrice(val);
+        p.setDiscountRate(BigDecimal.ZERO);
+        return p;
+    }
 
-            when(discountRepository.save(any(Discount.class))).thenReturn(discount);
-
-            Discount result = discountService.createDiscount(discount);
-
-            assertNotNull(result);
-                  assertEquals("SAVE10", result.getCode());
-                  verify(discountRepository).save(discount);
-        }
-
-    @Test
-        void getActiveDiscounts_returnsOnlyActiveDiscounts() {
-                  Discount active = new Discount();
-                  active.setActive(true);
-
-            when(discountRepository.findByActiveTrue()).thenReturn(List.of(active));
-
-            List<Discount> result = discountService.getActiveDiscounts();
-
-            assertEquals(1, result.size());
-                  assertTrue(result.get(0).isActive());
-        }
+    private ApplyDiscountRequest request(List<Long> ids, String rate) {
+        ApplyDiscountRequest req = new ApplyDiscountRequest();
+        req.setProductIds(ids);
+        req.setDiscountRate(new BigDecimal(rate));
+        return req;
+    }
 
     @Test
-        void getActiveDiscounts_returnsEmptyListWhenNoneActive() {
-                  when(discountRepository.findByActiveTrue()).thenReturn(List.of());
+    void applyDiscount_setsDiscountedPrice_andSnapshotsOriginal() {
+        Product p = product(1L, "100.00");
+        when(productRepository.findById(1L)).thenReturn(Optional.of(p));
+        when(wishlistRepository.findByProductIdIn(any())).thenReturn(List.of());
 
-            List<Discount> result = discountService.getActiveDiscounts();
+        discountService.applyDiscount(request(List.of(1L), "20"));
 
-            assertTrue(result.isEmpty());
-        }
-
-    @Test
-        void getDiscountByCode_returnsDiscount_whenCodeExists() {
-                  Discount discount = new Discount();
-                  discount.setCode("WELCOME");
-
-            when(discountRepository.findByCode("WELCOME")).thenReturn(Optional.of(discount));
-
-            Optional<Discount> result = discountService.getDiscountByCode("WELCOME");
-
-            assertTrue(result.isPresent());
-                  assertEquals("WELCOME", result.get().getCode());
-        }
+        assertEquals(0, new BigDecimal("100.00").compareTo(p.getOriginalPrice()));
+        assertEquals(0, new BigDecimal("80.00").compareTo(p.getPrice()));
+        assertEquals(0, new BigDecimal("20").compareTo(p.getDiscountRate()));
+        verify(productRepository).save(p);
+    }
 
     @Test
-        void getDiscountByCode_returnsEmpty_whenCodeNotFound() {
-                  when(discountRepository.findByCode("NOTEXIST")).thenReturn(Optional.empty());
+    void applyDiscount_notifiesWishlistOwners() {
+        Product p = product(1L, "50.00");
+        User owner = new User();
+        ReflectionTestUtils.setField(owner, "id", 7L);
+        owner.setName("Demo");
+        owner.setEmail("demo@test.com");
 
-            Optional<Discount> result = discountService.getDiscountByCode("NOTEXIST");
+        when(productRepository.findById(1L)).thenReturn(Optional.of(p));
+        when(wishlistRepository.findByProductIdIn(any())).thenReturn(List.of(new Wishlist(owner, p)));
 
-            assertFalse(result.isPresent());
-        }
+        discountService.applyDiscount(request(List.of(1L), "10"));
 
-    @Test
-        void deactivateDiscount_setsActiveFalseAndSaves() {
-                  Discount discount = new Discount();
-                  ReflectionTestUtils.setField(discount, "id", 1L);
-                  discount.setActive(true);
-
-            when(discountRepository.findById(1L)).thenReturn(Optional.of(discount));
-                  when(discountRepository.save(any(Discount.class))).thenAnswer(inv -> inv.getArgument(0));
-
-            discountService.deactivateDiscount(1L);
-
-            assertFalse(discount.isActive());
-                  verify(discountRepository).save(discount);
-        }
+        verify(emailService).sendDiscountNotification(eq("demo@test.com"), eq("Demo"), anyList());
+    }
 
     @Test
-        void deactivateDiscount_throwsException_whenDiscountNotFound() {
-                  when(discountRepository.findById(99L)).thenReturn(Optional.empty());
+    void applyDiscount_throws_whenNoProductsSelected() {
+        assertThrows(IllegalArgumentException.class,
+                () -> discountService.applyDiscount(request(List.of(), "20")));
+    }
 
-            assertThrows(RuntimeException.class, () -> discountService.deactivateDiscount(99L));
-        }
-  }
+    @Test
+    void applyDiscount_throws_whenRateOutOfRange() {
+        assertThrows(IllegalArgumentException.class,
+                () -> discountService.applyDiscount(request(List.of(1L), "95")));
+    }
+
+    @Test
+    void removeDiscount_restoresOriginalPrice() {
+        Product p = product(1L, "100.00");
+        // simulate an active 20% discount
+        p.setOriginalPrice(new BigDecimal("100.00"));
+        p.setPrice(new BigDecimal("80.00"));
+        p.setDiscountRate(new BigDecimal("20"));
+        when(productRepository.findById(1L)).thenReturn(Optional.of(p));
+
+        discountService.removeDiscount(1L);
+
+        assertEquals(0, new BigDecimal("100.00").compareTo(p.getPrice()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(p.getDiscountRate()));
+        assertNull(p.getOriginalPrice());
+        verify(productRepository).save(p);
+    }
+
+    @Test
+    void removeDiscount_throws_whenProductNotFound() {
+        when(productRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(NoSuchElementException.class, () -> discountService.removeDiscount(99L));
+    }
+}
