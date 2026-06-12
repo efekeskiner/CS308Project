@@ -306,15 +306,18 @@ function DiscountsPanel() {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
 
-        <input
-          type="number"
-          min={1}
-          max={100}
-          placeholder="Discount % (e.g. 20)"
-          style={styles.input}
-          value={rate}
-          onChange={(e) => setRate(e.target.value)}
-        />
+        <div style={styles.discountInputWrapper}>
+          <span style={styles.percentPrefix}>%</span>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            placeholder="Discount"
+            style={styles.discountInput}
+            value={rate}
+            onChange={(e) => setRate(e.target.value)}
+          />
+        </div>
 
         <button style={styles.approveBtn} onClick={applyDiscount}>
           Apply to Selected
@@ -485,5 +488,36 @@ const styles = {
     fontSize: 14,
     outline: "none",
     minWidth: 260,
+  },
+  discountInputWrapper: {
+    display: "flex",
+    alignItems: "center",
+    border: "1px solid #d1c7bc",
+    borderRadius: 8,
+    backgroundColor: "white",
+    height: 48,
+    minWidth: 180,
+    overflow: "hidden",
+  },
+
+  percentPrefix: {
+    padding: "0 12px",
+    fontSize: 16,
+    color: "#4b2e2e",
+    fontWeight: 600,
+    borderRight: "1px solid #e5d9ce",
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: "#f8f3ee",
+  },
+
+  discountInput: {
+    border: "none",
+    outline: "none",
+    padding: "10px 12px",
+    fontSize: 14,
+    width: "100%",
+    minWidth: 120,
   },
 };
